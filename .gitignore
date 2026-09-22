@@ -12,3 +12,23 @@
 /.codex/
 /.cursor/
 /.claude/
+
+# Runtime artifacts and credentials
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+.env
+*.log
+captures/
+reports/
+playwright-report/
+test-results/
+AGENTS.md
+CLAUDE.md
+.agents/
+.codex/
+.cursor/
+.claude/

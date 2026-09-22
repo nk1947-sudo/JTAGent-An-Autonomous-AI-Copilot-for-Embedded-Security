@@ -1,0 +1,37 @@
+{
+  "target_id": "synthetic-am335x",
+  "architecture": "arm",
+  "endianness": "little",
+  "regions": [
+    {
+      "name": "demo-code",
+      "start": 2147483648,
+      "end": 2147483904,
+      "kind": "ram",
+      "executable": true
+    },
+    {
+      "name": "demo-log",
+      "start": 2147487744,
+      "end": 2147488256,
+      "kind": "ram"
+    },
+    {
+      "name": "excluded-ram",
+      "start": 2147491840,
+      "end": 2147492096,
+      "kind": "ram",
+      "approved": false
+    }
+  ],
+  "capabilities": [
+    "read",
+    "registers",
+    "snapshot",
+    "halt",
+    "resume",
+    "step",
+    "write"
+  ],
+  "provenance": "Synthetic fixture v1; arbitrary demo addresses, not a discovered BeagleBone memory map."
+}
