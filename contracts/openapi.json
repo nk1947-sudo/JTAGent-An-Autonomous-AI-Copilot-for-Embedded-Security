@@ -1,0 +1,2146 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SiliconSentinel orchestrator",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "summary": "Login",
+        "operationId": "login_api_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_api_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "summary": "Config",
+        "operationId": "config_api_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs": {
+      "post": {
+        "summary": "Start",
+        "operationId": "start_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}": {
+      "get": {
+        "summary": "Get",
+        "operationId": "get_api_runs__rid__get",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete",
+        "operationId": "delete_api_runs__rid__delete",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}/cancel": {
+      "post": {
+        "summary": "Cancel",
+        "operationId": "cancel_api_runs__rid__cancel_post",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}/events": {
+      "get": {
+        "summary": "Events",
+        "operationId": "events_api_runs__rid__events_get",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}/report.json": {
+      "get": {
+        "summary": "Json Report",
+        "operationId": "json_report_api_runs__rid__report_json_get",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}/report.md": {
+      "get": {
+        "summary": "Md Report",
+        "operationId": "md_report_api_runs__rid__report_md_get",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/target/profile": {
+      "get": {
+        "summary": "Profile",
+        "operationId": "profile_api_v1_target_profile_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/target/status": {
+      "get": {
+        "summary": "Status",
+        "operationId": "status_api_v1_target_status_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions": {
+      "post": {
+        "summary": "Session",
+        "operationId": "session_api_v1_sessions_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memory/read": {
+      "post": {
+        "summary": "Read",
+        "operationId": "read_api_v1_memory_read_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryReadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/registers/read": {
+      "post": {
+        "summary": "Registers",
+        "operationId": "registers_api_v1_registers_read_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/snapshots/capture": {
+      "post": {
+        "summary": "Snapshot",
+        "operationId": "snapshot_api_v1_snapshots_capture_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/target/halt": {
+      "post": {
+        "summary": "Halt",
+        "operationId": "halt_api_v1_target_halt_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/target/resume": {
+      "post": {
+        "summary": "Resume",
+        "operationId": "resume_api_v1_target_resume_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/target/step": {
+      "post": {
+        "summary": "Step",
+        "operationId": "step_api_v1_target_step_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memory/write": {
+      "post": {
+        "summary": "Write",
+        "operationId": "write_api_v1_memory_write_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "firmware triage",
+              "bootloader inspection",
+              "crash investigation"
+            ],
+            "title": "Purpose"
+          },
+          "region_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Region Names"
+          },
+          "byte_budget": {
+            "type": "integer",
+            "maximum": 16384.0,
+            "minimum": 256.0,
+            "title": "Byte Budget",
+            "default": 16384
+          },
+          "collection_limit": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Collection Limit",
+            "default": 12
+          },
+          "iteration_limit": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Iteration Limit",
+            "default": 4
+          },
+          "deadline_seconds": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Deadline Seconds",
+            "default": 120
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "purpose",
+          "region_names"
+        ],
+        "title": "AuditRequest"
+      },
+      "EvidenceBundle": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "base_address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Base Address"
+          },
+          "length": {
+            "type": "integer",
+            "title": "Length"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "source_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Source Mode"
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "architecture": {
+            "type": "string",
+            "title": "Architecture",
+            "default": "arm"
+          },
+          "endianness": {
+            "type": "string",
+            "title": "Endianness"
+          },
+          "instruction_mode": {
+            "type": "string",
+            "title": "Instruction Mode"
+          },
+          "settings_source": {
+            "type": "string",
+            "title": "Settings Source"
+          },
+          "decoder": {
+            "type": "string",
+            "title": "Decoder"
+          },
+          "strings": {
+            "items": {
+              "$ref": "#/components/schemas/StringObservation"
+            },
+            "type": "array",
+            "title": "Strings",
+            "default": []
+          },
+          "instructions": {
+            "items": {
+              "$ref": "#/components/schemas/Instruction"
+            },
+            "type": "array",
+            "title": "Instructions",
+            "default": []
+          },
+          "approved_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Hex"
+          },
+          "withheld_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withheld Reason"
+          },
+          "uncertainties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uncertainties",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "base_address",
+          "length",
+          "content_hash",
+          "source_mode",
+          "provenance",
+          "endianness",
+          "instruction_mode",
+          "settings_source",
+          "decoder"
+        ],
+        "title": "EvidenceBundle"
+      },
+      "Finding": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "hypothesis",
+              "vulnerability"
+            ],
+            "title": "Category"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "suspected",
+              "validated",
+              "inconclusive",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "addresses": {
+            "items": {
+              "type": "integer",
+              "maximum": 4294967295.0,
+              "minimum": 0.0
+            },
+            "type": "array",
+            "title": "Addresses"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Explanation"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          },
+          "suggested_verification": {
+            "type": "string",
+            "title": "Suggested Verification"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "category",
+          "severity",
+          "confidence",
+          "status",
+          "evidence_ids",
+          "addresses",
+          "explanation",
+          "limitations",
+          "suggested_verification"
+        ],
+        "title": "Finding"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Instruction": {
+        "properties": {
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "mnemonic": {
+            "type": "string",
+            "title": "Mnemonic"
+          },
+          "operands": {
+            "type": "string",
+            "title": "Operands"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address",
+          "size",
+          "mnemonic",
+          "operands"
+        ],
+        "title": "Instruction"
+      },
+      "Login": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "Login"
+      },
+      "MemoryReadResult": {
+        "properties": {
+          "requested_length": {
+            "type": "integer",
+            "title": "Requested Length"
+          },
+          "returned_length": {
+            "type": "integer",
+            "title": "Returned Length"
+          },
+          "base_address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Base Address"
+          },
+          "address_space": {
+            "type": "string",
+            "title": "Address Space"
+          },
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "source_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Source Mode"
+          },
+          "target_state": {
+            "type": "string",
+            "title": "Target State"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "partial": {
+            "type": "boolean",
+            "title": "Partial"
+          },
+          "consistency": {
+            "type": "string",
+            "title": "Consistency"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceBundle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requested_length",
+          "returned_length",
+          "base_address",
+          "address_space",
+          "evidence_id",
+          "content_hash",
+          "source_mode",
+          "target_state",
+          "generation",
+          "partial",
+          "consistency",
+          "evidence"
+        ],
+        "title": "MemoryReadResult"
+      },
+      "ReadProposal": {
+        "properties": {
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "length": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 1.0,
+            "title": "Length",
+            "default": 256
+          },
+          "address_space": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "physical"
+            ],
+            "title": "Address Space",
+            "default": "virtual"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address",
+          "reason"
+        ],
+        "title": "ReadProposal"
+      },
+      "Region": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "maximum": 4294967296.0,
+            "minimum": 1.0,
+            "title": "End"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ram",
+              "rom"
+            ],
+            "title": "Kind"
+          },
+          "address_space": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "physical"
+            ],
+            "title": "Address Space",
+            "default": "virtual"
+          },
+          "executable": {
+            "type": "boolean",
+            "title": "Executable",
+            "default": false
+          },
+          "instruction_mode": {
+            "type": "string",
+            "enum": [
+              "arm",
+              "thumb"
+            ],
+            "title": "Instruction Mode",
+            "default": "arm"
+          },
+          "approved": {
+            "type": "boolean",
+            "title": "Approved",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "start",
+          "end",
+          "kind"
+        ],
+        "title": "Region"
+      },
+      "RegisterSnapshot": {
+        "properties": {
+          "values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "target_state": {
+            "type": "string",
+            "title": "Target State"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "source_mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Source Mode"
+          },
+          "mode_information": {
+            "type": "string",
+            "title": "Mode Information",
+            "default": "Profile mode; CPSR evidence is not an automatic override"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "values",
+          "target_state",
+          "generation",
+          "source_mode"
+        ],
+        "title": "RegisterSnapshot"
+      },
+      "RunState": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "queued"
+          },
+          "target_backend": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Target Backend"
+          },
+          "inference_backend": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "nebius"
+            ],
+            "title": "Inference Backend"
+          },
+          "model_id": {
+            "type": "string",
+            "title": "Model Id"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/TargetProfile"
+          },
+          "request": {
+            "$ref": "#/components/schemas/AuditRequest"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "captures": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryReadResult"
+            },
+            "type": "array",
+            "title": "Captures",
+            "default": []
+          },
+          "registers": {
+            "items": {
+              "$ref": "#/components/schemas/RegisterSnapshot"
+            },
+            "type": "array",
+            "title": "Registers",
+            "default": []
+          },
+          "visited_regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Visited Regions",
+            "default": []
+          },
+          "plan": {
+            "items": {
+              "$ref": "#/components/schemas/ReadProposal"
+            },
+            "type": "array",
+            "title": "Plan",
+            "default": []
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Findings",
+            "default": []
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "bytes_requested": {
+            "type": "integer",
+            "title": "Bytes Requested",
+            "default": 0
+          },
+          "collection_actions": {
+            "type": "integer",
+            "title": "Collection Actions",
+            "default": 0
+          },
+          "analysis_iterations": {
+            "type": "integer",
+            "title": "Analysis Iterations",
+            "default": 0
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Reason"
+          },
+          "elapsed_ms": {
+            "type": "number",
+            "title": "Elapsed Ms",
+            "default": 0
+          },
+          "tool_latencies_ms": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Tool Latencies Ms",
+            "default": []
+          },
+          "inference_latencies_ms": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Inference Latencies Ms",
+            "default": []
+          },
+          "provider_usage": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Provider Usage",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_backend",
+          "inference_backend",
+          "model_id",
+          "profile",
+          "request"
+        ],
+        "title": "RunState"
+      },
+      "StringObservation": {
+        "properties": {
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "redacted": {
+            "type": "boolean",
+            "title": "Redacted",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address",
+          "offset",
+          "text"
+        ],
+        "title": "StringObservation"
+      },
+      "TargetProfile": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "architecture": {
+            "type": "string",
+            "const": "arm",
+            "title": "Architecture",
+            "default": "arm"
+          },
+          "endianness": {
+            "type": "string",
+            "enum": [
+              "little",
+              "big"
+            ],
+            "title": "Endianness",
+            "default": "little"
+          },
+          "address_width": {
+            "type": "integer",
+            "const": 32,
+            "title": "Address Width",
+            "default": 32
+          },
+          "address_spaces": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "virtual",
+                "physical"
+              ]
+            },
+            "type": "array",
+            "title": "Address Spaces",
+            "default": [
+              "virtual"
+            ]
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "registers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Registers",
+            "default": [
+              "pc",
+              "lr",
+              "sp",
+              "cpsr"
+            ]
+          },
+          "capabilities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "registers",
+                "snapshot",
+                "halt",
+                "resume",
+                "step",
+                "write"
+              ]
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "default": [
+              "read",
+              "registers",
+              "snapshot"
+            ]
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "verified_for_live": {
+            "type": "boolean",
+            "title": "Verified For Live",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "regions",
+          "provenance"
+        ],
+        "title": "TargetProfile"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "MemoryReadRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "expected_generation": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Generation"
+          },
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "length": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 1.0,
+            "title": "Length",
+            "default": 256
+          },
+          "address_space": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "physical"
+            ],
+            "title": "Address Space",
+            "default": "virtual"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "session_id",
+          "address"
+        ],
+        "title": "MemoryReadRequest"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "expected_generation": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Generation"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Names",
+            "default": [
+              "pc",
+              "lr",
+              "sp",
+              "cpsr"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "session_id"
+        ],
+        "title": "RegisterRequest"
+      },
+      "SessionRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "operations": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "registers",
+                "snapshot",
+                "halt",
+                "resume",
+                "step",
+                "write"
+              ]
+            },
+            "type": "array",
+            "title": "Operations",
+            "default": [
+              "read",
+              "registers",
+              "snapshot"
+            ]
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "byte_budget": {
+            "type": "integer",
+            "maximum": 16384.0,
+            "minimum": 1.0,
+            "title": "Byte Budget",
+            "default": 16384
+          },
+          "operation_limit": {
+            "type": "integer",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Operation Limit",
+            "default": 24
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Ttl Seconds",
+            "default": 120
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "regions"
+        ],
+        "title": "SessionRequest"
+      },
+      "SnapshotRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "expected_generation": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Generation"
+          },
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "length": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 1.0,
+            "title": "Length",
+            "default": 256
+          },
+          "address_space": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "physical"
+            ],
+            "title": "Address Space",
+            "default": "virtual"
+          },
+          "registers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "Registers",
+            "default": [
+              "pc",
+              "lr",
+              "sp",
+              "cpsr"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "session_id",
+          "address"
+        ],
+        "title": "SnapshotRequest"
+      },
+      "TargetRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "expected_generation": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Generation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "session_id"
+        ],
+        "title": "TargetRequest"
+      },
+      "ToolResult": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "outcome_uncertain": {
+            "type": "boolean",
+            "title": "Outcome Uncertain",
+            "default": false
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "request_id",
+          "duration_ms",
+          "provenance"
+        ],
+        "title": "ToolResult"
+      },
+      "WriteRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "expected_generation": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Generation"
+          },
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "length": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 1.0,
+            "title": "Length",
+            "default": 256
+          },
+          "address_space": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "physical"
+            ],
+            "title": "Address Space",
+            "default": "virtual"
+          },
+          "data_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-fA-F]{2}){1,4096}$",
+            "title": "Data Hex"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "session_id",
+          "address",
+          "data_hex"
+        ],
+        "title": "WriteRequest"
+      }
+    }
+  }
+}

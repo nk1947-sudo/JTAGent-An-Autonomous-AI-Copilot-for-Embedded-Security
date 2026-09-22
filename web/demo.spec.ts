@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('operator audits fixture evidence and exports a cited report', async ({page})=>{
+  const errors:string[]=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');
+  await page.getByLabel('Operator password').fill('browser-test-password');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByText('MOCK TARGET',{exact:true})).toBeVisible();
+  await expect(page.getByText('SCRIPTED ANALYSIS',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Start audit',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Captured printable string'}).first()).toBeVisible({timeout:15000});
+  await expect(page.getByText('Checked references, addresses and claim status',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:/Evidence /}).first().click();
+  await expect(page.getByText('Raw bytes withheld by edge data policy',{exact:true})).toBeVisible();
+  const download=page.waitForEvent('download');
+  await page.getByRole('link',{name:'Export JSON',exact:true}).click();
+  const file=await download;
+  const data=JSON.parse(await readFile((await file.path())!,'utf8'));
+  expect(data.target_backend).toBe('mock');
+  expect(data.inference_backend).toBe('scripted');
+  expect(data.captures.length).toBe(2);
+  expect(data.findings.every((f:{status:string})=>f.status==='observed')).toBeTruthy();
+  expect(JSON.stringify(data)).not.toContain('synthetic-secret');
+  expect(errors).toEqual([]);
+  await page.screenshot({path:'test-results/dashboard.png',fullPage:true});
+  await page.getByRole('button',{name:'Delete run from memory'}).click();
+  await expect(page.getByText('No evidence collected. Start an audit to inspect approved memory.')).toBeVisible();
+});

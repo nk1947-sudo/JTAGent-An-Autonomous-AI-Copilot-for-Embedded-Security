@@ -201,7 +201,8 @@ class OpenOCDBackend:
         if operation not in ("halt", "resume", "step"):
             raise BackendError("unsupported_operation")
         self.generation += 1
-        await self.rpc.command(f"{self.target} {operation}", changing=True)
+        command = "halt 1000" if operation == "halt" else operation
+        await self.rpc.command(f"targets {self.target}; {command}", changing=True)
         state = await self.status()
         if state != ("running" if operation == "resume" else "halted"):
             raise BackendError("control_state_uncertain", True)

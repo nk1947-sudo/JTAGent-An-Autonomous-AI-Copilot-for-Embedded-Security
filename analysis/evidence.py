@@ -19,6 +19,16 @@ def sanitize(text: str) -> str:
     return text
 
 
+def sanitize_data(value):
+    if isinstance(value, str):
+        return sanitize(value)
+    if isinstance(value, list):
+        return [sanitize_data(v) for v in value]
+    if isinstance(value, dict):
+        return {k: sanitize_data(v) for k, v in value.items()}
+    return value
+
+
 def derive(data, address, region, profile, source, evidence_id):
     digest = hashlib.sha256(data).hexdigest()
     strings = []

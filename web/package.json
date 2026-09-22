@@ -1,0 +1,25 @@
+{
+  "name": "siliconsentinel-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "playwright test",
+    "types": "openapi-typescript ../contracts/openapi.json -o src/api.d.ts"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0",
+    "@playwright/test": "^1.51.0",
+    "openapi-typescript": "^7.6.0"
+  }
+}

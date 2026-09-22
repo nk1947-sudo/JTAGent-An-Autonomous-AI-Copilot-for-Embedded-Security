@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from analysis import evidence
+from contracts.http import BoundedBody
 from contracts.models import (
     MemoryReadRequest,
     RegisterRequest,
@@ -60,18 +61,11 @@ def create_app(service=None, api_key=None):
         raise ValueError("EDGE_API_KEY must contain at least 16 characters")
     app = FastAPI(title="SiliconSentinel edge", docs_url=None, redoc_url=None)
     app.state.service = service
+    app.add_middleware(BoundedBody)
 
     async def auth(authorization: str = Header(default="")):
         if not secrets.compare_digest(authorization, "Bearer " + api_key):
             raise HTTPException(401, "Authentication required")
-
-    @app.middleware("http")
-    async def limit_body(request, call_next):
-        if request.method == "POST":
-            body = await request.body()
-            if len(body) > 32768:
-                return JSONResponse({"detail": "request_too_large"}, status_code=413)
-        return await call_next(request)
 
     @app.exception_handler(PolicyError)
     async def policy_error(request, exc):
