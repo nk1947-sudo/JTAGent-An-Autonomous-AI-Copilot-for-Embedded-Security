@@ -24,7 +24,7 @@ def verify(findings, run):
     for original in findings:
         finding = original.model_copy(deep=True)
         known = evidence.keys() | registers.keys()
-        valid = bool(finding.evidence_ids) and set(finding.evidence_ids) <= known
+        valid = bool(finding.evidence_ids) and bool(finding.addresses) and set(finding.evidence_ids) <= known
         for address in finding.addresses:
             valid &= any(
                 c.base_address <= address < c.base_address + c.returned_length
@@ -34,6 +34,7 @@ def verify(findings, run):
                 address in r.values.values() for eid, r in registers.items() if eid in finding.evidence_ids
             )
         valid &= all(c.source_mode == run.target_backend for c in run.captures)
+        valid &= all(r.source_mode == run.target_backend for r in run.registers)
         exact_string = any(
             finding.explanation == "String observed: " + s.text
             and s.address in finding.addresses
@@ -48,6 +49,10 @@ def verify(findings, run):
             finding.limitations.append("Verifier rejected missing or inconsistent evidence references.")
         elif exact_string and finding.category == "observation":
             finding.status, finding.severity = "observed", "info"
+            finding.title = "Captured printable string"
+            finding.limitations.append(
+                "Only the cited printable bytes are established; behavior is unverified."
+            )
         else:
             finding.status = "inconclusive" if finding.status == "inconclusive" else "suspected"
             finding.confidence = "low"

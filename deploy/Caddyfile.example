@@ -1,0 +1,7 @@
+# Replace the hostname. Caddy terminates TLS; the app still requires operator authentication.
+console.example.com {
+    reverse_proxy 127.0.0.1:8000 {
+        flush_interval -1
+    }
+    header Strict-Transport-Security "max-age=31536000"
+}

@@ -1,0 +1,25 @@
+# Orchestrator/UI only. The edge stays with the operator's physical adapter.
+services:
+  console:
+    build:
+      context: ..
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      EDGE_API_URL: ${EDGE_API_URL:?Set the authenticated edge bridge URL}
+      EDGE_API_KEY: ${EDGE_API_KEY:?Set the server-side edge key}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?Set a unique operator password}
+      INFERENCE_BACKEND: ${INFERENCE_BACKEND:-scripted}
+      NEBIUS_BASE_URL: ${NEBIUS_BASE_URL:-}
+      NEBIUS_MODEL: ${NEBIUS_MODEL:-}
+      NEBIUS_API_KEY: ${NEBIUS_API_KEY:-}
+      NEBIUS_VERIFIED_CONTEXT_TOKENS: ${NEBIUS_VERIFIED_CONTEXT_TOKENS:-0}
+      NEBIUS_MAX_OUTPUT_TOKENS: ${NEBIUS_MAX_OUTPUT_TOKENS:-2048}
+      COOKIE_SECURE: "1"
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the external HTTPS origin}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped

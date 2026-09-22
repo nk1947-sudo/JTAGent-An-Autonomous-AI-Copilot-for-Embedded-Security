@@ -8,6 +8,7 @@ from contracts.models import (
     MemoryReadResult,
     RegisterSnapshot,
     ToolResult,
+    now,
     uid,
 )
 from edge.backends import BackendError
@@ -93,6 +94,7 @@ class EdgeService:
             raise BackendError("invalid_backend_length")
         evidence = derive(raw, req.address, region, self.profile, self.backend.mode, uid())
         return MemoryReadResult(
+            timestamp=getattr(self.backend, "manifest", {}).get("captured_at", now()),
             requested_length=req.length,
             returned_length=len(raw),
             base_address=req.address,
@@ -110,6 +112,7 @@ class EdgeService:
     async def registers(self, names):
         values = await self.backend.registers(names)
         return RegisterSnapshot(
+            timestamp=getattr(self.backend, "manifest", {}).get("captured_at", now()),
             values=values,
             target_state=await self.backend.status(),
             generation=self.backend.generation,
