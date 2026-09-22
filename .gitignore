@@ -1,0 +1,14 @@
+# Local planning and audit documents
+/BUG_TRACKER.md
+/DAILY_MANAGER.md
+/IMPLEMENTATION_PLAN.md
+/PRD.md
+/SYSTEM_AUDIT.md
+/TESTING_STRATEGY.md
+
+# Agent instructions and local memory
+/AGENTS.md
+/.agents/
+/.codex/
+/.cursor/
+/.claude/
