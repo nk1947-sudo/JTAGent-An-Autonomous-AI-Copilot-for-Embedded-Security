@@ -98,8 +98,6 @@ async def test_openocd_templates_registers_and_lifecycle():
                 commands.append(cmd)
                 if cmd == "version":
                     result = "Open On-Chip Debugger 0.12.0-test"
-                elif cmd in ("tcl notifications off", "tcl trace off"):
-                    result = ""
                 elif cmd == "am335x.cpu curstate":
                     result = state
                 elif cmd == "targets am335x.cpu; halt 1000":
@@ -133,6 +131,7 @@ async def test_openocd_templates_registers_and_lifecycle():
             await backend.write(0x80000000, b"x")
         await rpc.close()
     assert not any("reset" in c for c in commands)
+    assert not any(c.startswith("tcl ") for c in commands)
 
 
 @pytest.mark.parametrize("reply", ["1 999", "nonsense", "0x01 0x02 0x03"])

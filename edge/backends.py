@@ -165,8 +165,9 @@ class OpenOCDBackend:
             version = await self.rpc.command("version")
             if not version.startswith(self.version_prefix):
                 raise BackendError("openocd_version_mismatch")
-            await self.rpc.command("tcl notifications off")
-            await self.rpc.command("tcl trace off")
+            # Tcl RPC notifications and trace output default to off. Do not send
+            # the optional toggles here: older xPack builds reject the two-word
+            # `tcl` commands even though their RPC framing is fully compatible.
             self.ready = True
         state = await self.rpc.command(f"{self.target} curstate")
         if state not in ("running", "halted", "reset", "unknown"):

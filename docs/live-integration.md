@@ -1,5 +1,5 @@
 # Live integration gates
-Updated 2026-09-22 UTC. These are operator gates, not completed hardware or deployment claims.
+Updated 2026-09-25 UTC. These are operator gates and measured local-hardware results, not deployment claims.
 
 ## BeagleBone/OpenOCD
 The adapter implements documented Tcl RPC framing and fixed read/get_reg/control templates.
@@ -15,6 +15,9 @@ Install a compatible OpenOCD on the workstation that owns the adapter. Review al
 scripts and target events for reset, initialization and memory-write side effects. Pin the installed
 version in OPENOCD_VERSION_PREFIX after reviewing its commands. Keep Tcl/GDB/telnet on loopback;
 disable unused listeners. The bridge is the only permitted external interface.
+The verified xPack 0.12.0 development build supports Tcl RPC framing but rejects the optional
+`tcl notifications off` and `tcl trace off` commands. The bridge relies on OpenOCD's documented
+default-off behavior and does not send those compatibility-breaking toggles.
 Only one edge process and no competing debugger may own this target. External resets or debugger
 access invalidate the process-local generation model; stop the run and re-establish the session.
 
@@ -44,7 +47,13 @@ Independent mock controls have a maximum ten-second lease and restore only a CPU
 
 Physical exit gate: read known memory/registers in an authorized session, demonstrate restoration,
 unplug/failure handling and compare bytes with an independent manual debugger read from a compatible
-snapshot. Pending: no installed OpenOCD, ARM GDB or physical board verified in this environment.
+snapshot. On 2026-09-25, the C232HM/AM335x scan chain was verified and an authenticated live snapshot
+read 16 bytes from physical `0x402F0400`, captured `pc/lr/sp/cpsr`, and restored the initially running
+CPU to running in 816.45 ms. The API and direct target state checks both reported running afterward;
+no recovery flag was raised. Disconnect handling and independent byte comparison remain pending.
+At the configured 100 kHz adapter speed, direct measurements were 262.62 ms for 16 bytes,
+843.22 ms for 64 bytes and 3074.85 ms for 256 bytes. The initial live profile is therefore capped
+at 64 bytes to keep each hardware read below the two-second transport timeout.
 
 ## Nebius
 Token Factory inference and Nebius compute hosting are separate. The code requires explicit
@@ -63,9 +72,13 @@ With credentials and verified configuration, explicitly opt into a minimal poten
 ```sh
 uv run --env-file .env python scripts/nebius_smoke.py --allow-paid-inference
 ```
-Then run the dashboard with INFERENCE_BACKEND=nebius and TARGET_BACKEND=mock first. A successful
-full audit must show the model's bounded request, collected synthetic evidence, validated schema and
-verified references. The smoke script alone does not pass the full analysis gate.
+Then run the repeatable full synthetic evidence gate:
+```sh
+uv run --env-file .env python scripts/nebius_audit.py --allow-paid-inference
+```
+On 2026-09-25, the configured Nemotron model passed visibility and native tool-call checks, then the
+full synthetic audit completed with a bounded request, captured evidence, validated schema, verified
+references and no errors. No live-target evidence was sent to Nebius.
 Provider retention remains unknown until the account settings/contract are checked.
 
 ## Deployment

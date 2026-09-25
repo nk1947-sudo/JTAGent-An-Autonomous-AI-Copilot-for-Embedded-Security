@@ -1,5 +1,5 @@
 # Delivery status and measured evidence
-Updated 2026-09-22; branch dev. Baseline ad823ab842526fd8ee10acc57a15c8ca39327350.
+Updated 2026-09-25; branch dev. Baseline ad823ab842526fd8ee10acc57a15c8ca39327350.
 Local milestone commits: 50e2597 (bounded edge and evidence), 48de175 (working offline audit/dashboard).
 
 ## Implemented and exercised
@@ -10,6 +10,13 @@ Local milestone commits: 50e2597 (bounded edge and evidence), 48de175 (working o
   findings, Markdown/JSON download and in-memory run deletion.
 - Read-only replay with attributed original timestamps, profile and hash validation.
 - Nebius adapter and OpenOCD transport exercised against fake HTTP/socket servers; no fixture fallback.
+- Physical C232HM-to-AM335x JTAG scan chain verified. A live, authenticated, policy-bounded snapshot
+  captured 16 SRAM bytes plus `pc/lr/sp/cpsr` and restored running state in 816.45 ms.
+- A complete physical-target LangGraph audit traversed planner, policy gate, collector, decoder,
+  analyst, verifier and reporter; it captured 64 bytes plus registers with no errors in 1293.26 ms.
+- The configured Nebius account exposed `nvidia/nemotron-3-super-120b-a12b`. A real native tool-call
+  smoke used 1230 tokens, followed by a complete synthetic-evidence LangGraph audit with two provider
+  calls (1199 and 3212 tokens), one capture, verified references and no errors.
 
 ## Verification
 Python: 54 tests passed. Browser: one smoke test passed against two real loopback HTTP services.
@@ -32,7 +39,10 @@ This measures local synthetic code paths, not physical JTAG, TCP/network latency
 No manual baseline or real-world success percentage is claimed.
 
 ## Remaining gates and limits
-No OpenOCD/ARM GDB or physical board verified; no provider credentials/entitlement/hosted limits verified.
+OpenOCD and the physical board are verified for the narrow read-only SRAM audit above; ARM GDB,
+disconnect recovery, broader memory ranges and independent byte comparison remain unverified.
+Nebius credentials, model visibility, native tool calling and synthetic analysis are verified. Provider
+retention settings and sending derived live-target evidence remain unverified and unauthorized.
 Docker CLI exists but its daemon is unavailable. No paid resources or public deployment created.
 The .env.example, Dockerfile, Compose and reverse-proxy example are integration assets, not deployment evidence.
 

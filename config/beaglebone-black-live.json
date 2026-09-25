@@ -1,0 +1,36 @@
+{
+  "target_id": "beaglebone-black-am335x",
+  "architecture": "arm",
+  "endianness": "little",
+  "address_width": 32,
+  "address_spaces": [
+    "physical"
+  ],
+  "regions": [
+    {
+      "name": "am335x-internal-sram-smoke-window",
+      "start": 1076823040,
+      "end": 1076823104,
+      "kind": "ram",
+      "address_space": "physical",
+      "executable": true,
+      "instruction_mode": "arm",
+      "approved": true
+    }
+  ],
+  "registers": [
+    "pc",
+    "lr",
+    "sp",
+    "cpsr"
+  ],
+  "capabilities": [
+    "read",
+    "registers",
+    "snapshot",
+    "halt",
+    "resume"
+  ],
+  "provenance": "TI AM335x TRM Rev Q, ARM Cortex-A8 L3 memory map: internal SRAM starts at physical 0x402F0400. Initial live approval is restricted to the first 64 bytes because a measured 256-byte read exceeds the two-second hardware timeout at 100 kHz; JTAG adapter and target identity were verified locally on 2026-09-24.",
+  "verified_for_live": true
+}

@@ -155,6 +155,7 @@ npm --prefix web run types
 | `scripts/inspect_elf.py` | Local ELF metadata inspection (never loads or executes the file) |
 | `scripts/make_replay.py` | Regenerates the attributed synthetic replay manifest |
 | `scripts/nebius_smoke.py` | Opt-in gate that sends one synthetic bounded task to a configured Nebius endpoint |
+| `scripts/nebius_audit.py` | Opt-in full LangGraph audit using synthetic target evidence and real Nebius inference |
 | `scripts/generate_contracts.py` | Regenerates `contracts/openapi.json` from both FastAPI apps |
 
 ## Security notes
