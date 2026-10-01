@@ -24,6 +24,84 @@ def report_data(run):
     return sanitize_data(data)
 
 
+ARM_MODES = {
+    0x10: "User",
+    0x11: "FIQ",
+    0x12: "IRQ",
+    0x13: "Supervisor",
+    0x16: "Monitor",
+    0x17: "Abort",
+    0x1A: "Hyp",
+    0x1B: "Undefined",
+    0x1F: "System",
+}
+
+
+def describe_cpsr(value):
+    """Deterministic ARMv7-A CPSR decode; a description of the bits, not of program behavior."""
+    flags = "".join(n if value >> b & 1 else "-" for n, b in (("N", 31), ("Z", 30), ("C", 29), ("V", 28)))
+    masks = "".join(n if value >> b & 1 else "-" for n, b in (("I", 7), ("F", 6)))
+    state = "Thumb" if value >> 5 & 1 else "ARM"
+    mode = ARM_MODES.get(value & 0x1F, f"reserved 0b{value & 0x1F:05b}")
+    return f"{mode} mode, {state} state, flags {flags}, interrupt masks {masks}"
+
+
+def acquisition_lines(a):
+    if a is None:
+        return ["  Acquisition: unknown (captured before acquisition metadata was recorded)"]
+    return [
+        (
+            f"  Acquisition: {a.method}; edge halted the CPU: {a.halted_by_edge}; states initial="
+            f"{a.initial_state}, at capture={a.capture_state}, final={a.final_state or 'unknown'}; "
+            f"restoration={a.restoration}; recovery required: {a.recovery_required}; "
+            f"generation {a.generation_before}->{a.generation_after}"
+        ),
+        (
+            f"  Recorded builds: edge {a.edge_build_id or 'unknown'}, orchestrator "
+            f"{a.orchestrator_build_id or 'unknown'}; debugger {a.debugger_version or 'unknown'}"
+        ),
+    ]
+
+
+def evidence_lines(captures, registers, acquisitions):
+    """Capture and register detail shared by the investigation and Attack Lab Markdown exports."""
+    by_evidence = {a.evidence_id: a for a in acquisitions}
+    lines = []
+    for c in captures:
+        lines += [
+            (
+                f"- {c.evidence_id}: {c.address_space} 0x{c.base_address:08x}, "
+                f"{c.returned_length}/{c.requested_length} bytes, captured {c.timestamp}, "
+                f"generation {c.generation}, {c.evidence.decoder}; SHA256 {c.content_hash}"
+            ),
+            (
+                f"  Settings: {c.evidence.architecture}/{c.evidence.endianness}/"
+                f"{c.evidence.instruction_mode}; {c.evidence.settings_source}"
+            ),
+            f"  CPU state at capture: {c.target_state}; {c.consistency}",
+            *acquisition_lines(by_evidence.get(c.evidence_id)),
+        ]
+        if c.evidence.withheld_reason:
+            lines.append(
+                f"  Raw bytes: not exported ({c.evidence.withheld_reason}); verify against the hash."
+            )
+        for i in c.evidence.instructions[:64]:
+            lines.append(f"  - 0x{i.address:08x}  {i.mnemonic} {i.operands}".rstrip())
+        lines += [f"  - string 0x{s.address:08x} (+{s.offset}): {s.text}" for s in c.evidence.strings[:64]]
+        lines += ["  - uncertainty: " + u for u in c.evidence.uncertainties]
+    lines += ["", "## Register snapshots", ""]
+    lines += ["No register snapshots captured."] if not registers else []
+    for r in registers:
+        lines.append(
+            f"- {r.evidence_id}: {r.source_mode}, CPU {r.target_state} at capture, {r.timestamp}, "
+            f"generation {r.generation} (captured separately from memory, not an atomic snapshot)"
+        )
+        for name, value in r.values.items():
+            note = f"  ({describe_cpsr(value)})" if name == "cpsr" else ""
+            lines.append(f"  - {name} = 0x{value:08x}{note}")
+    return lines
+
+
 def markdown(run):
     d = report_data(run)
     lines = [
@@ -41,18 +119,7 @@ def markdown(run):
         "## Inspected evidence",
         "",
     ]
-    for c in run.captures:
-        lines += [
-            (
-                f"- {c.evidence_id}: {c.address_space} 0x{c.base_address:08x}, "
-                f"{c.returned_length}/{c.requested_length} bytes, captured {c.timestamp}, "
-                f"generation {c.generation}, {c.evidence.decoder}; SHA256 {c.content_hash}"
-            ),
-            (
-                f"  Settings: {c.evidence.architecture}/{c.evidence.endianness}/"
-                f"{c.evidence.instruction_mode}; {c.evidence.settings_source}"
-            ),
-        ]
+    lines += evidence_lines(run.captures, run.registers, run.acquisitions)
     lines += ["", "## Findings", ""]
     for f in run.findings:
         lines += [

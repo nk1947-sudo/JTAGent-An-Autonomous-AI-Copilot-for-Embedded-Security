@@ -1,11 +1,12 @@
 import asyncio
+import re
 import time
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
 from analysis.evidence import sanitize
-from contracts.models import MemoryReadResult, RegisterSnapshot, SnapshotRequest, now
+from contracts.models import AcquisitionRecord, MemoryReadResult, RegisterSnapshot, SnapshotRequest, now
 from edge.service import PolicyError, containing
 
 
@@ -15,6 +16,24 @@ class WorkflowState(TypedDict):
 
 class StopRun(Exception):
     pass
+
+
+REGISTER_VALUE_CLAIM = re.compile(
+    r"\b(pc|lr|sp|cpsr|r(?:1[0-5]|[0-9]))\b"
+    r"(?:\s+(?:is|was|points?|pointing)\s+(?:to\s+)?)?\s*(?:=|:)?\s*(0x[0-9a-f]+)",
+    re.IGNORECASE,
+)
+
+
+def register_claims_match(finding, registers):
+    claims = REGISTER_VALUE_CLAIM.findall(finding.title + "\n" + finding.explanation)
+    if not claims:
+        return True
+    cited = [snapshot for eid, snapshot in registers.items() if eid in finding.evidence_ids]
+    return all(
+        any(snapshot.values.get(name.lower()) == int(value, 16) for snapshot in cited)
+        for name, value in claims
+    )
 
 
 def verify(findings, run):
@@ -35,6 +54,7 @@ def verify(findings, run):
             )
         valid &= all(c.source_mode == run.target_backend for c in run.captures)
         valid &= all(r.source_mode == run.target_backend for r in run.registers)
+        semantic_registers_valid = register_claims_match(finding, registers)
         exact_string = any(
             finding.explanation == "String observed: " + s.text
             and s.address in finding.addresses
@@ -43,10 +63,14 @@ def verify(findings, run):
             for c in run.captures
             for s in c.evidence.strings
         )
-        if not valid:
+        if not valid or not semantic_registers_valid:
             finding.status = "rejected"
             finding.confidence = "low"
-            finding.limitations.append("Verifier rejected missing or inconsistent evidence references.")
+            finding.limitations.append(
+                "Verifier rejected a register value that contradicted the cited snapshot."
+                if valid and not semantic_registers_valid
+                else "Verifier rejected missing or inconsistent evidence references."
+            )
         elif exact_string and finding.category == "observation":
             finding.status, finding.severity = "observed", "info"
             finding.title = "Captured printable string"
@@ -64,8 +88,9 @@ def verify(findings, run):
 
 
 class Workflow:
-    def __init__(self, run, edge, inference, cancelled):
+    def __init__(self, run, edge, inference, cancelled, build_id=None):
         self.run, self.edge, self.inference, self.cancelled = run, edge, inference, cancelled
+        self.build_id = build_id
         self.queue, self.proposals, self.visited = [], [], set()
         self.session_id = None
         self.started = time.perf_counter()
@@ -183,6 +208,12 @@ class Workflow:
         capture = MemoryReadResult.model_validate(result["data"]["memory"])
         self.run.captures.append(capture)
         self.run.registers.append(RegisterSnapshot.model_validate(result["data"]["registers"]))
+        if result["data"].get("acquisition"):
+            self.run.acquisitions.append(
+                AcquisitionRecord.model_validate(
+                    {**result["data"]["acquisition"], "orchestrator_build_id": self.build_id}
+                )
+            )
         self.run.visited_regions.append(
             f"{capture.address_space}:0x{capture.base_address:08x}+{capture.returned_length}"
         )

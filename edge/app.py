@@ -1,3 +1,4 @@
+import hashlib
 import os
 import secrets
 from pathlib import Path
@@ -9,6 +10,7 @@ from fastapi.responses import JSONResponse
 from analysis import evidence
 from contracts.http import BoundedBody
 from contracts.models import (
+    EdgeStatus,
     MemoryReadRequest,
     RegisterRequest,
     SessionRequest,
@@ -16,12 +18,15 @@ from contracts.models import (
     TargetProfile,
     TargetRequest,
     ToolResult,
+    UartAuditRequest,
     WriteRequest,
 )
 from edge.backends import BackendError, MockBackend, OpenOCDBackend, ReplayBackend, TclRPC
 from edge.service import EdgeService, PolicyError
+from edge.uart import UartAuditError, configured_uart_auditor
 
 ROOT = Path(__file__).resolve().parents[1]
+CONFIGURE_UART = object()
 
 
 def configured_service():
@@ -51,16 +56,19 @@ def configured_service():
         profile,
         int(os.getenv("MAX_READ_BYTES", "4096")),
         arm_snapshots=mode == "mock" or os.getenv("ARM_SNAPSHOTS") == "1",
+        retain_raw=os.getenv("RETAIN_RAW_LOCAL") == "1",
     )
 
 
-def create_app(service=None, api_key=None):
+def create_app(service=None, api_key=None, uart_auditor=CONFIGURE_UART):
     service = service or configured_service()
+    uart_auditor = configured_uart_auditor() if uart_auditor is CONFIGURE_UART else uart_auditor
     api_key = api_key or os.environ.get("EDGE_API_KEY")
     if not api_key or len(api_key) < 16:
         raise ValueError("EDGE_API_KEY must contain at least 16 characters")
     app = FastAPI(title="SiliconSentinel edge", docs_url=None, redoc_url=None)
     app.state.service = service
+    app.state.uart_auditor = uart_auditor
     app.add_middleware(BoundedBody)
 
     async def auth(authorization: str = Header(default="")):
@@ -75,28 +83,51 @@ def create_app(service=None, api_key=None):
     async def backend_error(request, exc):
         return JSONResponse({"detail": exc.code}, status_code=503)
 
+    @app.exception_handler(UartAuditError)
+    async def uart_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=503)
+
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         return JSONResponse({"detail": "Invalid request schema"}, status_code=422)
 
     @app.get("/healthz")
     async def health():
-        return {"status": "ok"}
+        # Liveness plus the identity of the code this process loaded. Says nothing about readiness.
+        return {"status": "ok", "build": service.identity().model_dump()}
 
     @app.get("/api/v1/target/profile", dependencies=[Depends(auth)], response_model=TargetProfile)
     async def profile():
         return service.profile
 
-    @app.get("/api/v1/target/status", dependencies=[Depends(auth)])
+    @app.get("/api/v1/target/status", dependencies=[Depends(auth)], response_model=EdgeStatus)
     async def status():
         async with service.lock:
-            return {
-                "state": await service.backend.status(),
-                "target_backend": service.backend.mode,
-                "generation": service.backend.generation,
-                "capabilities": service.profile.capabilities,
-                "recovery_required": service.recovery_required,
-            }
+            return await service.report()
+
+    @app.get("/api/v1/evidence/{evidence_id}/raw", dependencies=[Depends(auth)])
+    async def raw_evidence(evidence_id: str):
+        raw = service.raw_evidence(evidence_id)
+        if raw is None:
+            raise HTTPException(404, "raw_not_retained")
+        return {
+            "evidence_id": evidence_id,
+            "length": len(raw),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "raw_hex": raw.hex(),
+        }
+
+    @app.get("/api/v1/uart/status", dependencies=[Depends(auth)])
+    async def uart_status():
+        if uart_auditor is None:
+            return {"enabled": False}
+        return {"enabled": True, "port": uart_auditor.port, "baud": uart_auditor.baud}
+
+    @app.post("/api/v1/uart/audit", dependencies=[Depends(auth)])
+    async def uart_audit(req: UartAuditRequest):
+        if uart_auditor is None:
+            raise HTTPException(503, "UART audit is not locally enabled")
+        return await uart_auditor.run(req)
 
     @app.post("/api/v1/sessions", dependencies=[Depends(auth)])
     async def session(req: SessionRequest):

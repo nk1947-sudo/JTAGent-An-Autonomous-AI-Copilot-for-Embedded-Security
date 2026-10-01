@@ -273,3 +273,98 @@ def test_report_redaction_preserves_json_types():
     from analysis.evidence import sanitize_data
 
     assert sanitize_data({"value": "password=test", "count": 2}) == {"value": "[REDACTED]", "count": 2}
+
+
+# Replies below were captured from a real OpenOCD 0.12.0 Tcl RPC session against a running
+# AM335x Cortex-A8 (2026-09-29). OpenOCD returns these failures as plain text, not "Error ...".
+@pytest.mark.parametrize(
+    "method,args,reply,code",
+    [
+        ("read", (0x402F0400, 16, "physical"), "read_memory: failed to read memory", "memory_read_failed"),
+        ("read", (0x402F0400, 16, "physical"), "", "memory_read_failed"),
+        ("registers", (["pc"],), "failed to read register 'pc'", "register_read_failed"),
+    ],
+)
+async def test_openocd_plain_text_failures_are_classified(method, args, reply, code):
+    class FakeRPC:
+        async def command(self, *a, **k):
+            return reply
+
+    backend = OpenOCDBackend(FakeRPC(), "am335x.cpu", "reviewed")
+    with pytest.raises(BackendError) as failure:
+        await getattr(backend, method)(*args)
+    assert failure.value.code == code
+
+
+class RunningFailBackend:
+    """Offline stand-in: a running CPU whose debugger refuses direct reads (not hardware)."""
+
+    mode, generation = "openocd", 0
+
+    def __init__(self, state="running"):
+        self.state = state
+
+    async def status(self):
+        return self.state
+
+    async def read(self, address, length, space):
+        raise BackendError("memory_read_failed")
+
+    async def registers(self, names):
+        raise BackendError("register_read_failed")
+
+
+async def test_running_target_read_reports_prerequisite(profile):
+    from edge.service import EdgeService
+
+    service = EdgeService(RunningFailBackend(), profile)
+    region = next(r for r in profile.regions if r.approved)
+    from contracts.models import MemoryReadRequest
+
+    request = MemoryReadRequest(
+        target_id=profile.target_id,
+        session_id="x",
+        address=region.start,
+        length=4,
+        address_space=region.address_space,
+    )
+    with pytest.raises(BackendError, match="memory_read_failed_target_running"):
+        await service.read(request)
+    with pytest.raises(BackendError, match="register_read_failed_target_running"):
+        await service.registers(["pc"])
+    service.backend.state = "halted"
+    with pytest.raises(BackendError, match="^memory_read_failed$"):
+        await service.read(request)
+
+
+@pytest.mark.parametrize(
+    "code,reachable,version_ok,communication",
+    [
+        ("rpc_unavailable", False, None, "unknown"),
+        ("openocd_version_mismatch", True, False, "unknown"),
+        ("debugger_command_failed", True, True, "failed"),
+    ],
+)
+async def test_status_report_separates_layers(profile, code, reachable, version_ok, communication):
+    from edge.service import EdgeService
+
+    class Broken(RunningFailBackend):
+        async def status(self):
+            raise BackendError(code)
+
+    report = await EdgeService(Broken(), profile).report()
+    assert report["application"] == "ok" and report["state"] is None
+    assert report["debugger"]["reachable"] is reachable
+    assert report["debugger"]["version_ok"] is version_ok
+    assert report["debugger"]["error_code"] == code
+    assert report["target"]["communication"] == communication
+
+
+async def test_status_report_running_notes_read_prerequisite(profile):
+    from edge.service import EdgeService
+
+    report = await EdgeService(RunningFailBackend(), profile).report()
+    assert report["target"] == {"communication": "ok", "execution_state": "running"}
+    assert "NOT armed" in report["read_prerequisite"] and report["snapshots_armed"] is False
+    report = await EdgeService(RunningFailBackend("halted"), profile).report()
+    assert report["read_prerequisite"] is None

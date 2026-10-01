@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness Route */
+        get: operations["readiness_route_api_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/config": {
         parameters: {
             query?: never;
@@ -72,7 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs": {
+    "/api/uart/audit": {
         parameters: {
             query?: never;
             header?: never;
@@ -80,6 +97,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /** Uart Audit */
+        post: operations["uart_audit_api_uart_audit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_runs_get"];
         put?: never;
         /** Start */
         post: operations["start_api_runs_post"];
@@ -175,6 +210,279 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attack-lab/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recommend Attack Modules */
+        post: operations["recommend_attack_modules_api_attack_lab_recommendations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attack Plans */
+        get: operations["list_attack_plans_api_attack_lab_plans_get"];
+        put?: never;
+        /** Create Attack Plan */
+        post: operations["create_attack_plan_api_attack_lab_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Attack Plan Route */
+        get: operations["get_attack_plan_route_api_attack_lab_plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/steps/{step_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Attack Step */
+        post: operations["decide_attack_step_api_attack_lab_plans__plan_id__steps__step_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/execute-next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute Attack Step */
+        post: operations["execute_attack_step_api_attack_lab_plans__plan_id__execute_next_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Attack Plan */
+        post: operations["pause_attack_plan_api_attack_lab_plans__plan_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Attack Plan */
+        post: operations["resume_attack_plan_api_attack_lab_plans__plan_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/abort": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abort Attack Plan */
+        post: operations["abort_attack_plan_api_attack_lab_plans__plan_id__abort_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/report.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Attack Json Report */
+        get: operations["attack_json_report_api_attack_lab_plans__plan_id__report_json_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/report.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Attack Markdown Report */
+        get: operations["attack_markdown_report_api_attack_lab_plans__plan_id__report_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{rid}/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Bundle */
+        post: operations["run_bundle_api_runs__rid__bundle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attack-lab/plans/{plan_id}/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attack Bundle */
+        post: operations["attack_bundle_api_attack_lab_plans__plan_id__bundle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exports */
+        get: operations["exports_api_exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exports/{bundle_id}/{artifact}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Artifact */
+        get: operations["export_artifact_api_exports__bundle_id___artifact__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/debugger/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Debugger Advice */
+        post: operations["debugger_advice_api_debugger_advice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workbench/patch-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patch Preview */
+        post: operations["patch_preview_api_workbench_patch_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/target/profile": {
         parameters: {
             query?: never;
@@ -203,6 +511,57 @@ export interface paths {
         get: operations["status_api_v1_target_status_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evidence/{evidence_id}/raw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Raw Evidence */
+        get: operations["raw_evidence_api_v1_evidence__evidence_id__raw_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uart/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uart Status */
+        get: operations["uart_status_api_v1_uart_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uart/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Uart Audit */
+        post: operations["uart_audit_api_v1_uart_audit_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -349,6 +708,226 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcquisitionRecord
+         * @description How one snapshot was obtained. Absent for captures made before this was recorded.
+         */
+        AcquisitionRecord: {
+            /** Evidence Id */
+            evidence_id: string;
+            /** Register Evidence Id */
+            register_evidence_id?: string | null;
+            /** Method */
+            method: string;
+            /**
+             * Backend
+             * @enum {string}
+             */
+            backend: "mock" | "replay" | "openocd";
+            /** Debugger Version */
+            debugger_version?: string | null;
+            /** Halted By Edge */
+            halted_by_edge: boolean;
+            /** Initial State */
+            initial_state: string;
+            /** Capture State */
+            capture_state: string;
+            /** Final State */
+            final_state?: string | null;
+            /** Restoration */
+            restoration: string;
+            /** Recovery Required */
+            recovery_required: boolean;
+            /** Generation Before */
+            generation_before: number;
+            /** Generation After */
+            generation_after: number;
+            /** Edge Build Id */
+            edge_build_id?: string | null;
+            /** Orchestrator Build Id */
+            orchestrator_build_id?: string | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+        };
+        /** AttackDecision */
+        AttackDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "reject";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** AttackPlan */
+        AttackPlan: {
+            /** Plan Id */
+            plan_id?: string;
+            /** Created At */
+            created_at?: string;
+            /** Target Id */
+            target_id: string;
+            /**
+             * Module Id
+             * @enum {string}
+             */
+            module_id: "jtag-debug-lock-audit" | "debug-console-exposure" | "firmware-integrity-assessment" | "fault-injection-campaign-design" | "side-channel-capture-plan";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "jtag" | "debug_interface" | "firmware" | "fault_injection" | "side_channel";
+            /** Objective */
+            objective: string;
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "low" | "medium" | "high" | "critical";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "awaiting_approval" | "ready" | "running" | "paused" | "simulation_completed" | "completed" | "blocked" | "aborted";
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "evidence_review" | "live_jtag" | "simulation" | "external_hardware_required";
+            /** Authorization Acknowledged */
+            authorization_acknowledged: boolean;
+            /**
+             * Evidence Ids
+             * @default []
+             */
+            evidence_ids: string[];
+            /**
+             * Captures
+             * @default []
+             */
+            captures: components["schemas"]["MemoryReadResult"][];
+            /**
+             * Registers
+             * @default []
+             */
+            registers: components["schemas"]["RegisterSnapshot"][];
+            /**
+             * Acquisitions
+             * @default []
+             */
+            acquisitions: components["schemas"]["AcquisitionRecord"][];
+            /** Steps */
+            steps: components["schemas"]["AttackStep"][];
+            /**
+             * Events
+             * @default []
+             */
+            events: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** AttackPlanRequest */
+        AttackPlanRequest: {
+            /** Target Id */
+            target_id: string;
+            /**
+             * Module Id
+             * @enum {string}
+             */
+            module_id: "jtag-debug-lock-audit" | "debug-console-exposure" | "firmware-integrity-assessment" | "fault-injection-campaign-design" | "side-channel-capture-plan";
+            /** Objective */
+            objective: string;
+            /** Run Id */
+            run_id?: string | null;
+            /** Authorization Acknowledged */
+            authorization_acknowledged: boolean;
+        };
+        /** AttackRecommendation */
+        AttackRecommendation: {
+            /**
+             * Module Id
+             * @enum {string}
+             */
+            module_id: "jtag-debug-lock-audit" | "debug-console-exposure" | "firmware-integrity-assessment" | "fault-injection-campaign-design" | "side-channel-capture-plan";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "jtag" | "debug_interface" | "firmware" | "fault_injection" | "side_channel";
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "low" | "medium" | "high" | "critical";
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "evidence_review" | "live_jtag" | "simulation" | "external_hardware_required";
+            /** Prerequisites */
+            prerequisites: string[];
+            /**
+             * Evidence Ids
+             * @default []
+             */
+            evidence_ids: string[];
+            /** Supported */
+            supported: boolean;
+        };
+        /** AttackRecommendationRequest */
+        AttackRecommendationRequest: {
+            /** Target Id */
+            target_id: string;
+            /** Objective */
+            objective: string;
+            /** Run Id */
+            run_id?: string | null;
+        };
+        /** AttackStep */
+        AttackStep: {
+            /** Step Id */
+            step_id?: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "evidence_review" | "register_review" | "jtag_snapshot_probe" | "uart_observation" | "cpu_control_simulation" | "firmware_patch_simulation" | "fault_injection_design" | "side_channel_design";
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "low" | "medium" | "high" | "critical";
+            /**
+             * State Changing
+             * @default false
+             */
+            state_changing: boolean;
+            /**
+             * Requires Approval
+             * @default false
+             */
+            requires_approval: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "pending_approval" | "approved" | "rejected" | "completed" | "blocked" | "aborted";
+            /** Result */
+            result?: string | null;
+        };
         /** AuditRequest */
         AuditRequest: {
             /** Target Id */
@@ -380,6 +959,181 @@ export interface components {
              * @default 120
              */
             deadline_seconds: number;
+        };
+        /** Blocker */
+        Blocker: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * BuildIdentity
+         * @description Non-secret identity of the code a process actually loaded; see contracts/build.py.
+         */
+        BuildIdentity: {
+            /**
+             * Component
+             * @enum {string}
+             */
+            component: "edge" | "orchestrator";
+            /** Version */
+            version: string;
+            /** Commit */
+            commit?: string | null;
+            /** Dirty */
+            dirty?: boolean | null;
+            /** Source Fingerprint */
+            source_fingerprint: string;
+            /** Build Id */
+            build_id: string;
+            /** Process Started At */
+            process_started_at: string;
+            /** Pid */
+            pid: number;
+            /** Python */
+            python: string;
+        };
+        /** BundleRequest */
+        BundleRequest: {
+            /**
+             * Include Raw
+             * @default false
+             */
+            include_raw: boolean;
+        };
+        /** BundleResult */
+        BundleResult: {
+            /** Bundle Id */
+            bundle_id: string;
+            /** Created At */
+            created_at: string;
+            /** Subject Kind */
+            subject_kind: string;
+            /** Subject Id */
+            subject_id: string;
+            /** Target Backend */
+            target_backend: string;
+            /** Captures */
+            captures: number;
+            /** Raw Included */
+            raw_included: number;
+            /**
+             * Verification
+             * @enum {string}
+             */
+            verification: "VERIFIED" | "INCOMPLETE" | "FAILED" | "UNSUPPORTED";
+            /**
+             * Failed Checks
+             * @default []
+             */
+            failed_checks: string[];
+            /**
+             * Unverifiable Checks
+             * @default 0
+             */
+            unverifiable_checks: number;
+            /** Path */
+            path: string;
+            /** Note */
+            note: string;
+        };
+        /** BundleSummary */
+        BundleSummary: {
+            /** Bundle Id */
+            bundle_id: string;
+            /** Created At */
+            created_at: string;
+            /** Subject Kind */
+            subject_kind: string;
+            /** Subject Id */
+            subject_id: string;
+            /** Target Backend */
+            target_backend: string;
+            /** Captures */
+            captures: number;
+            /** Raw Included */
+            raw_included: number;
+            /**
+             * Verification
+             * @enum {string}
+             */
+            verification: "VERIFIED" | "INCOMPLETE" | "FAILED" | "UNSUPPORTED";
+            /**
+             * Failed Checks
+             * @default []
+             */
+            failed_checks: string[];
+            /**
+             * Unverifiable Checks
+             * @default 0
+             */
+            unverifiable_checks: number;
+        };
+        /** DebuggerAction */
+        DebuggerAction: {
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "capture_memory" | "inspect_registers" | "disassemble" | "set_breakpoint" | "single_step" | "resume_bounded" | "propose_patch";
+            /** Rationale */
+            rationale: string;
+            /** Address */
+            address?: number | null;
+            /** Length */
+            length?: number | null;
+            /** Count */
+            count?: number | null;
+            /**
+             * Requires Approval
+             * @default true
+             */
+            requires_approval: boolean;
+        };
+        /** DebuggerAdvice */
+        DebuggerAdvice: {
+            /** Summary */
+            summary: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /**
+             * Observations
+             * @default []
+             */
+            observations: string[];
+            /**
+             * Actions
+             * @default []
+             */
+            actions: components["schemas"]["DebuggerAction"][];
+            /**
+             * Limitations
+             * @default []
+             */
+            limitations: string[];
+        };
+        /** DebuggerAdviceRequest */
+        DebuggerAdviceRequest: {
+            /** Plan Id */
+            plan_id: string;
+            /** Objective */
+            objective: string;
+        };
+        /** DebuggerStatus */
+        DebuggerStatus: {
+            /** Applicable */
+            applicable: boolean;
+            /** Reachable */
+            reachable?: boolean | null;
+            /** Version Ok */
+            version_ok?: boolean | null;
+            /** Version */
+            version?: string | null;
+            /** Expected Version Prefix */
+            expected_version_prefix?: string | null;
+            /** Error Code */
+            error_code?: string | null;
         };
         /** EvidenceBundle */
         EvidenceBundle: {
@@ -518,6 +1272,68 @@ export interface components {
             consistency: string;
             evidence: components["schemas"]["EvidenceBundle"];
         };
+        /** PatchInstruction */
+        PatchInstruction: {
+            /** Address */
+            address: number;
+            /** Bytes Hex */
+            bytes_hex: string;
+            /** Mnemonic */
+            mnemonic: string;
+            /** Operands */
+            operands: string;
+        };
+        /** PatchPreview */
+        PatchPreview: {
+            /** Patch Id */
+            patch_id?: string;
+            /** Plan Id */
+            plan_id: string;
+            /** Address */
+            address: number;
+            /** Length */
+            length: number;
+            /**
+             * Instruction Mode
+             * @enum {string}
+             */
+            instruction_mode: "arm" | "thumb";
+            /** Original Hex */
+            original_hex: string;
+            /** Replacement Hex */
+            replacement_hex: string;
+            /** Original Sha256 */
+            original_sha256: string;
+            /** Replacement Sha256 */
+            replacement_sha256: string;
+            /** Original Instructions */
+            original_instructions: components["schemas"]["PatchInstruction"][];
+            /** Replacement Instructions */
+            replacement_instructions: components["schemas"]["PatchInstruction"][];
+            /**
+             * Live Execution Enabled
+             * @default false
+             */
+            live_execution_enabled: boolean;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** PatchPreviewRequest */
+        PatchPreviewRequest: {
+            /** Plan Id */
+            plan_id: string;
+            /** Address */
+            address: number;
+            /** Original Hex */
+            original_hex: string;
+            /** Replacement Hex */
+            replacement_hex: string;
+            /**
+             * Instruction Mode
+             * @enum {string}
+             */
+            instruction_mode: "arm" | "thumb";
+        };
         /** ReadProposal */
         ReadProposal: {
             /** Address */
@@ -535,6 +1351,60 @@ export interface components {
             address_space: "virtual" | "physical";
             /** Reason */
             reason: string;
+        };
+        /**
+         * Readiness
+         * @description Orchestrator's fail-closed assessment. Missing information is never positive readiness.
+         */
+        Readiness: {
+            /** Checked At */
+            checked_at: string;
+            /**
+             * Edge
+             * @enum {string}
+             */
+            edge: "ok" | "unreachable" | "incompatible";
+            /** Schema Version */
+            schema_version?: number | null;
+            /** Compatible */
+            compatible: boolean;
+            /**
+             * Incompatibilities
+             * @default []
+             */
+            incompatibilities: components["schemas"]["Blocker"][];
+            /** Run Ready */
+            run_ready: boolean;
+            /** Live Ready */
+            live_ready: boolean;
+            /**
+             * Blockers
+             * @default []
+             */
+            blockers: components["schemas"]["Blocker"][];
+            /** Status Age Seconds */
+            status_age_seconds?: number | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
+            /** Target Backend */
+            target_backend?: ("mock" | "replay" | "openocd") | null;
+            debugger?: components["schemas"]["DebuggerStatus"] | null;
+            target?: components["schemas"]["TargetStatus"] | null;
+            /** Snapshots Armed */
+            snapshots_armed?: boolean | null;
+            /** Recovery Required */
+            recovery_required?: boolean | null;
+            /** Read Prerequisite */
+            read_prerequisite?: string | null;
+            edge_build?: components["schemas"]["BuildIdentity"] | null;
+            orchestrator_build: components["schemas"]["BuildIdentity"];
+            /** Edge Source Drift */
+            edge_source_drift?: boolean | null;
+            /** Orchestrator Source Drift */
+            orchestrator_source_drift: boolean;
         };
         /** Region */
         Region: {
@@ -633,6 +1503,11 @@ export interface components {
              */
             registers: components["schemas"]["RegisterSnapshot"][];
             /**
+             * Acquisitions
+             * @default []
+             */
+            acquisitions: components["schemas"]["AcquisitionRecord"][];
+            /**
              * Visited Regions
              * @default []
              */
@@ -698,6 +1573,40 @@ export interface components {
             provider_usage: {
                 [key: string]: unknown;
             }[];
+        };
+        /** RunSummary */
+        RunSummary: {
+            /** Run Id */
+            run_id: string;
+            /** Created At */
+            created_at: string;
+            /** Status */
+            status: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "firmware triage" | "bootloader inspection" | "crash investigation";
+            /**
+             * Target Backend
+             * @enum {string}
+             */
+            target_backend: "mock" | "replay" | "openocd";
+            /**
+             * Inference Backend
+             * @enum {string}
+             */
+            inference_backend: "scripted" | "nebius";
+            /** Model Id */
+            model_id: string;
+            /** Capture Count */
+            capture_count: number;
+            /** Bytes Requested */
+            bytes_requested: number;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Termination Reason */
+            termination_reason?: string | null;
         };
         /** StringObservation */
         StringObservation: {
@@ -771,6 +1680,30 @@ export interface components {
              */
             verified_for_live: boolean;
         };
+        /** TargetStatus */
+        TargetStatus: {
+            /**
+             * Communication
+             * @enum {string}
+             */
+            communication: "ok" | "failed" | "unknown";
+            /** Execution State */
+            execution_state?: string | null;
+        };
+        /** UartAuditRequest */
+        UartAuditRequest: {
+            /**
+             * Mode
+             * @default observe
+             * @enum {string}
+             */
+            mode: "observe" | "interrupt" | "credential_check";
+            /**
+             * Timeout Seconds
+             * @default 90
+             */
+            timeout_seconds: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -783,6 +1716,58 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * EdgeStatus
+         * @description Edge status v2. The unversioned flat shape (state, target_backend, ...) is schema v1.
+         */
+        EdgeStatus: {
+            /**
+             * Schema Name
+             * @constant
+             */
+            schema_name: "jtagent.edge.status";
+            /** Schema Version */
+            schema_version: number;
+            /** Observed At */
+            observed_at: string;
+            /**
+             * Application
+             * @constant
+             */
+            application: "ok";
+            build: components["schemas"]["BuildIdentity"];
+            /** Source Drift */
+            source_drift?: boolean | null;
+            debugger: components["schemas"]["DebuggerStatus"];
+            target: components["schemas"]["TargetStatus"];
+            /** State */
+            state?: string | null;
+            /**
+             * Target Backend
+             * @enum {string}
+             */
+            target_backend: "mock" | "replay" | "openocd";
+            /** Generation */
+            generation: number;
+            /** Capabilities */
+            capabilities: ("read" | "registers" | "snapshot" | "halt" | "resume" | "step" | "write")[];
+            /** Recovery Required */
+            recovery_required: boolean;
+            /** Snapshots Armed */
+            snapshots_armed: boolean;
+            /** Retains Raw Locally */
+            retains_raw_locally: boolean;
+            /** Read Prerequisite */
+            read_prerequisite?: string | null;
+            live_operations: components["schemas"]["LiveGate"];
+        };
+        /** LiveGate */
+        LiveGate: {
+            /** Allowed */
+            allowed: boolean;
+            /** Blockers */
+            blockers: string[];
         };
         /** MemoryReadRequest */
         MemoryReadRequest: {
@@ -1045,6 +2030,26 @@ export interface operations {
             };
         };
     };
+    readiness_route_api_readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Readiness"];
+                };
+            };
+        };
+    };
     config_api_config_get: {
         parameters: {
             query?: never;
@@ -1061,6 +2066,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    uart_audit_api_uart_audit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UartAuditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSummary"][];
                 };
             };
         };
@@ -1284,6 +2342,533 @@ export interface operations {
             };
         };
     };
+    recommend_attack_modules_api_attack_lab_recommendations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttackRecommendationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackRecommendation"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_attack_plans_api_attack_lab_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"][];
+                };
+            };
+        };
+    };
+    create_attack_plan_api_attack_lab_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttackPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_attack_plan_route_api_attack_lab_plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_attack_step_api_attack_lab_plans__plan_id__steps__step_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttackDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_attack_step_api_attack_lab_plans__plan_id__execute_next_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_attack_plan_api_attack_lab_plans__plan_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_attack_plan_api_attack_lab_plans__plan_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    abort_attack_plan_api_attack_lab_plans__plan_id__abort_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttackPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attack_json_report_api_attack_lab_plans__plan_id__report_json_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attack_markdown_report_api_attack_lab_plans__plan_id__report_md_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_bundle_api_runs__rid__bundle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BundleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attack_bundle_api_attack_lab_plans__plan_id__bundle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BundleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exports_api_exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BundleSummary"][];
+                };
+            };
+        };
+    };
+    export_artifact_api_exports__bundle_id___artifact__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bundle_id: string;
+                artifact: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    debugger_advice_api_debugger_advice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DebuggerAdviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebuggerAdvice"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_preview_api_workbench_patch_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatchPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     profile_api_v1_target_profile_get: {
         parameters: {
             query?: never;
@@ -1325,6 +2910,105 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EdgeStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    raw_evidence_api_v1_evidence__evidence_id__raw_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uart_status_api_v1_uart_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uart_audit_api_v1_uart_audit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UartAuditRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

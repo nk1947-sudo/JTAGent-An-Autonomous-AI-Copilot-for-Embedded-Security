@@ -8,7 +8,14 @@ import httpx
 from pydantic import ValidationError
 
 from analysis.evidence import sanitize_data
-from contracts.models import AnalysisResponse, Finding, ReadProposal
+from contracts.models import (
+    AnalysisResponse,
+    AttackRecommendationSelection,
+    DebuggerAction,
+    DebuggerAdvice,
+    Finding,
+    ReadProposal,
+)
 
 
 class InferenceError(Exception):
@@ -74,6 +81,71 @@ class ScriptedInference:
                 )
             )
         return AnalysisResponse(findings=findings)
+
+    async def recommend_attacks(self, profile, findings, objective):
+        text = objective.lower()
+        selected = []
+        keywords = {
+            "jtag-debug-lock-audit": ("jtag", "debug", "halt", "register"),
+            "debug-console-exposure": ("uart", "console", "u-boot", "shell"),
+            "firmware-integrity-assessment": ("firmware", "boot", "rootkit", "persistence"),
+            "fault-injection-campaign-design": ("fault", "glitch", "voltage", "clock"),
+            "side-channel-capture-plan": ("side-channel", "power", "timing", "electromagnetic"),
+        }
+        for module_id, terms in keywords.items():
+            if any(term in text for term in terms):
+                selected.append(module_id)
+        if not selected:
+            selected = ["jtag-debug-lock-audit", "firmware-integrity-assessment"]
+        return AttackRecommendationSelection(
+            module_ids=selected[:5],
+            rationale=f"Matched the operator objective to the {profile.architecture} profile and {len(findings)} retained findings.",
+        )
+
+    async def debugger_assist(self, profile, plan, objective):
+        capture = plan.captures[-1] if plan.captures else None
+        registers = plan.registers[-1] if plan.registers else None
+        observations = []
+        actions = []
+        if capture:
+            observations.append(
+                f"Captured {capture.returned_length} bytes at 0x{capture.base_address:08x}; SHA-256 {capture.content_hash}."
+            )
+            observations.append(
+                f"Capstone decoded {len(capture.evidence.instructions)} profile-mode instructions."
+            )
+            actions.append(
+                DebuggerAction(
+                    operation="disassemble",
+                    address=capture.base_address,
+                    length=capture.returned_length,
+                    rationale="Review the existing bounded capture before requesting additional target access.",
+                    requires_approval=False,
+                )
+            )
+        if registers:
+            pc = registers.values.get("pc")
+            observations.append("Captured PC is " + (f"0x{pc:08x}." if pc is not None else "not available."))
+            actions.append(
+                DebuggerAction(
+                    operation="inspect_registers",
+                    rationale="Correlate PC, LR, SP, and CPSR with the captured instruction window.",
+                    requires_approval=False,
+                )
+            )
+        return DebuggerAdvice(
+            summary="Evidence-first debugger guidance for the authorized target.",
+            hypothesis=(
+                "The snapshot proves bounded debug visibility, but code reachability and secure-debug policy require additional evidence."
+            ),
+            observations=observations,
+            actions=actions,
+            limitations=[
+                "No source symbols or Ghidra project are linked.",
+                "No breakpoint, step, write, or persistent modification was executed.",
+                f"Operator objective treated as data: {objective[:160]}",
+            ],
+        )
 
 
 class NebiusInference:
@@ -220,6 +292,66 @@ class NebiusInference:
             return AnalysisResponse.model_validate(sanitize_data(result))
         except ValidationError:
             raise InferenceError("Invalid analyst response schema") from None
+
+    async def recommend_attacks(self, profile, findings, objective):
+        await self.preflight()
+        try:
+            result = await self.tool(
+                "select_attack_modules",
+                AttackRecommendationSelection.model_json_schema(),
+                {
+                    "objective": objective,
+                    "target": profile.model_dump(),
+                    "findings": [finding.model_dump() for finding in findings[:12]],
+                    "allowed_module_ids": [
+                        "jtag-debug-lock-audit",
+                        "debug-console-exposure",
+                        "firmware-integrity-assessment",
+                        "fault-injection-campaign-design",
+                        "side-channel-capture-plan",
+                    ],
+                    "constraints": "Select only catalog IDs. Recommend analysis and controlled validation, never arbitrary commands or payloads.",
+                },
+            )
+            return AttackRecommendationSelection.model_validate(sanitize_data(result))
+        except ValidationError:
+            raise InferenceError("Invalid attack recommendation schema") from None
+
+    async def debugger_assist(self, profile, plan, objective):
+        await self.preflight()
+        captures = []
+        for capture in plan.captures[-3:]:
+            data = capture.model_dump(exclude={"evidence": {"approved_hex"}})
+            data["evidence"]["instructions"] = data["evidence"]["instructions"][:48]
+            data["evidence"]["strings"] = data["evidence"]["strings"][:24]
+            captures.append(data)
+        try:
+            result = await self.tool(
+                "submit_debugger_advice",
+                DebuggerAdvice.model_json_schema(),
+                {
+                    "objective": objective,
+                    "target": profile.model_dump(),
+                    "captures": captures,
+                    "registers": [item.model_dump() for item in plan.registers[-3:]],
+                    "allowed_operations": [
+                        "capture_memory",
+                        "inspect_registers",
+                        "disassemble",
+                        "set_breakpoint",
+                        "single_step",
+                        "resume_bounded",
+                        "propose_patch",
+                    ],
+                    "constraints": (
+                        "Return typed proposals only. Do not emit shell, GDB, OpenOCD, exploit, rootkit, or payload commands. "
+                        "Writes are unavailable. Clearly separate observations from hypotheses."
+                    ),
+                },
+            )
+            return DebuggerAdvice.model_validate(sanitize_data(result))
+        except ValidationError:
+            raise InferenceError("Invalid debugger advice schema") from None
 
 
 def configured_inference():

@@ -73,6 +73,24 @@
         }
       }
     },
+    "/api/readiness": {
+      "get": {
+        "summary": "Readiness Route",
+        "operationId": "readiness_route_api_readiness_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/config": {
       "get": {
         "summary": "Config",
@@ -89,7 +107,63 @@
         }
       }
     },
+    "/api/uart/audit": {
+      "post": {
+        "summary": "Uart Audit",
+        "operationId": "uart_audit_api_uart_audit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UartAuditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs": {
+      "get": {
+        "summary": "List Runs",
+        "operationId": "list_runs_api_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Runs Api Runs Get"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "summary": "Start",
         "operationId": "start_api_runs_post",
@@ -349,6 +423,675 @@
         }
       }
     },
+    "/api/attack-lab/recommendations": {
+      "post": {
+        "summary": "Recommend Attack Modules",
+        "operationId": "recommend_attack_modules_api_attack_lab_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttackRecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttackRecommendation"
+                  },
+                  "type": "array",
+                  "title": "Response Recommend Attack Modules Api Attack Lab Recommendations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans": {
+      "get": {
+        "summary": "List Attack Plans",
+        "operationId": "list_attack_plans_api_attack_lab_plans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttackPlan"
+                  },
+                  "type": "array",
+                  "title": "Response List Attack Plans Api Attack Lab Plans Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Attack Plan",
+        "operationId": "create_attack_plan_api_attack_lab_plans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttackPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}": {
+      "get": {
+        "summary": "Get Attack Plan Route",
+        "operationId": "get_attack_plan_route_api_attack_lab_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/steps/{step_id}/decision": {
+      "post": {
+        "summary": "Decide Attack Step",
+        "operationId": "decide_attack_step_api_attack_lab_plans__plan_id__steps__step_id__decision_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "step_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Step Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttackDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/execute-next": {
+      "post": {
+        "summary": "Execute Attack Step",
+        "operationId": "execute_attack_step_api_attack_lab_plans__plan_id__execute_next_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/pause": {
+      "post": {
+        "summary": "Pause Attack Plan",
+        "operationId": "pause_attack_plan_api_attack_lab_plans__plan_id__pause_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/resume": {
+      "post": {
+        "summary": "Resume Attack Plan",
+        "operationId": "resume_attack_plan_api_attack_lab_plans__plan_id__resume_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/abort": {
+      "post": {
+        "summary": "Abort Attack Plan",
+        "operationId": "abort_attack_plan_api_attack_lab_plans__plan_id__abort_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttackPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/report.json": {
+      "get": {
+        "summary": "Attack Json Report",
+        "operationId": "attack_json_report_api_attack_lab_plans__plan_id__report_json_get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/report.md": {
+      "get": {
+        "summary": "Attack Markdown Report",
+        "operationId": "attack_markdown_report_api_attack_lab_plans__plan_id__report_md_get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{rid}/bundle": {
+      "post": {
+        "summary": "Run Bundle",
+        "operationId": "run_bundle_api_runs__rid__bundle_post",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attack-lab/plans/{plan_id}/bundle": {
+      "post": {
+        "summary": "Attack Bundle",
+        "operationId": "attack_bundle_api_attack_lab_plans__plan_id__bundle_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports": {
+      "get": {
+        "summary": "Exports",
+        "operationId": "exports_api_exports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BundleSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Exports Api Exports Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports/{bundle_id}/{artifact}": {
+      "get": {
+        "summary": "Export Artifact",
+        "operationId": "export_artifact_api_exports__bundle_id___artifact__get",
+        "parameters": [
+          {
+            "name": "bundle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Bundle Id"
+            }
+          },
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/debugger/advice": {
+      "post": {
+        "summary": "Debugger Advice",
+        "operationId": "debugger_advice_api_debugger_advice_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebuggerAdviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebuggerAdvice"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workbench/patch-preview": {
+      "post": {
+        "summary": "Patch Preview",
+        "operationId": "patch_preview_api_workbench_patch_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/target/profile": {
       "get": {
         "summary": "Profile",
@@ -405,6 +1148,141 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EdgeStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/raw": {
+      "get": {
+        "summary": "Raw Evidence",
+        "operationId": "raw_evidence_api_v1_evidence__evidence_id__raw_get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uart/status": {
+      "get": {
+        "summary": "Uart Status",
+        "operationId": "uart_status_api_v1_uart_status_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uart/audit": {
+      "post": {
+        "summary": "Uart Audit",
+        "operationId": "uart_audit_api_v1_uart_audit_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UartAuditRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -828,6 +1706,559 @@
   },
   "components": {
     "schemas": {
+      "AcquisitionRecord": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "register_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Register Evidence Id"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Backend"
+          },
+          "debugger_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debugger Version"
+          },
+          "halted_by_edge": {
+            "type": "boolean",
+            "title": "Halted By Edge"
+          },
+          "initial_state": {
+            "type": "string",
+            "title": "Initial State"
+          },
+          "capture_state": {
+            "type": "string",
+            "title": "Capture State"
+          },
+          "final_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final State"
+          },
+          "restoration": {
+            "type": "string",
+            "title": "Restoration"
+          },
+          "recovery_required": {
+            "type": "boolean",
+            "title": "Recovery Required"
+          },
+          "generation_before": {
+            "type": "integer",
+            "title": "Generation Before"
+          },
+          "generation_after": {
+            "type": "integer",
+            "title": "Generation After"
+          },
+          "edge_build_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Build Id"
+          },
+          "orchestrator_build_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orchestrator Build Id"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "method",
+          "backend",
+          "halted_by_edge",
+          "initial_state",
+          "capture_state",
+          "restoration",
+          "recovery_required",
+          "generation_before",
+          "generation_after"
+        ],
+        "title": "AcquisitionRecord",
+        "description": "How one snapshot was obtained. Absent for captures made before this was recorded."
+      },
+      "AttackDecision": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "AttackDecision"
+      },
+      "AttackPlan": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "module_id": {
+            "type": "string",
+            "enum": [
+              "jtag-debug-lock-audit",
+              "debug-console-exposure",
+              "firmware-integrity-assessment",
+              "fault-injection-campaign-design",
+              "side-channel-capture-plan"
+            ],
+            "title": "Module Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "jtag",
+              "debug_interface",
+              "firmware",
+              "fault_injection",
+              "side_channel"
+            ],
+            "title": "Category"
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_approval",
+              "ready",
+              "running",
+              "paused",
+              "simulation_completed",
+              "completed",
+              "blocked",
+              "aborted"
+            ],
+            "title": "Status"
+          },
+          "execution_mode": {
+            "type": "string",
+            "enum": [
+              "evidence_review",
+              "live_jtag",
+              "simulation",
+              "external_hardware_required"
+            ],
+            "title": "Execution Mode"
+          },
+          "authorization_acknowledged": {
+            "type": "boolean",
+            "title": "Authorization Acknowledged"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids",
+            "default": []
+          },
+          "captures": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryReadResult"
+            },
+            "type": "array",
+            "title": "Captures",
+            "default": []
+          },
+          "registers": {
+            "items": {
+              "$ref": "#/components/schemas/RegisterSnapshot"
+            },
+            "type": "array",
+            "title": "Registers",
+            "default": []
+          },
+          "acquisitions": {
+            "items": {
+              "$ref": "#/components/schemas/AcquisitionRecord"
+            },
+            "type": "array",
+            "title": "Acquisitions",
+            "default": []
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/AttackStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "module_id",
+          "category",
+          "objective",
+          "risk",
+          "status",
+          "execution_mode",
+          "authorization_acknowledged",
+          "steps"
+        ],
+        "title": "AttackPlan"
+      },
+      "AttackPlanRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "module_id": {
+            "type": "string",
+            "enum": [
+              "jtag-debug-lock-audit",
+              "debug-console-exposure",
+              "firmware-integrity-assessment",
+              "fault-injection-campaign-design",
+              "side-channel-capture-plan"
+            ],
+            "title": "Module Id"
+          },
+          "objective": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Objective"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "authorization_acknowledged": {
+            "type": "boolean",
+            "title": "Authorization Acknowledged"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "module_id",
+          "objective",
+          "authorization_acknowledged"
+        ],
+        "title": "AttackPlanRequest"
+      },
+      "AttackRecommendation": {
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "enum": [
+              "jtag-debug-lock-audit",
+              "debug-console-exposure",
+              "firmware-integrity-assessment",
+              "fault-injection-campaign-design",
+              "side-channel-capture-plan"
+            ],
+            "title": "Module Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "jtag",
+              "debug_interface",
+              "firmware",
+              "fault_injection",
+              "side_channel"
+            ],
+            "title": "Category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk"
+          },
+          "execution_mode": {
+            "type": "string",
+            "enum": [
+              "evidence_review",
+              "live_jtag",
+              "simulation",
+              "external_hardware_required"
+            ],
+            "title": "Execution Mode"
+          },
+          "prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prerequisites"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids",
+            "default": []
+          },
+          "supported": {
+            "type": "boolean",
+            "title": "Supported"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "module_id",
+          "category",
+          "title",
+          "summary",
+          "rationale",
+          "risk",
+          "execution_mode",
+          "prerequisites",
+          "supported"
+        ],
+        "title": "AttackRecommendation"
+      },
+      "AttackRecommendationRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "objective": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Objective"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_id",
+          "objective"
+        ],
+        "title": "AttackRecommendationRequest"
+      },
+      "AttackStep": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "evidence_review",
+              "register_review",
+              "jtag_snapshot_probe",
+              "uart_observation",
+              "cpu_control_simulation",
+              "firmware_patch_simulation",
+              "fault_injection_design",
+              "side_channel_design"
+            ],
+            "title": "Operation"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk"
+          },
+          "state_changing": {
+            "type": "boolean",
+            "title": "State Changing",
+            "default": false
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "title": "Requires Approval",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "pending_approval",
+              "approved",
+              "rejected",
+              "completed",
+              "blocked",
+              "aborted"
+            ],
+            "title": "Status"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "operation",
+          "risk",
+          "status"
+        ],
+        "title": "AttackStep"
+      },
       "AuditRequest": {
         "properties": {
           "target_id": {
@@ -889,6 +2320,465 @@
           "region_names"
         ],
         "title": "AuditRequest"
+      },
+      "Blocker": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Blocker"
+      },
+      "BuildIdentity": {
+        "properties": {
+          "component": {
+            "type": "string",
+            "enum": [
+              "edge",
+              "orchestrator"
+            ],
+            "title": "Component"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit"
+          },
+          "dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dirty"
+          },
+          "source_fingerprint": {
+            "type": "string",
+            "title": "Source Fingerprint"
+          },
+          "build_id": {
+            "type": "string",
+            "title": "Build Id"
+          },
+          "process_started_at": {
+            "type": "string",
+            "title": "Process Started At"
+          },
+          "pid": {
+            "type": "integer",
+            "title": "Pid"
+          },
+          "python": {
+            "type": "string",
+            "title": "Python"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "component",
+          "version",
+          "source_fingerprint",
+          "build_id",
+          "process_started_at",
+          "pid",
+          "python"
+        ],
+        "title": "BuildIdentity",
+        "description": "Non-secret identity of the code a process actually loaded; see contracts/build.py."
+      },
+      "BundleRequest": {
+        "properties": {
+          "include_raw": {
+            "type": "boolean",
+            "title": "Include Raw",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BundleRequest"
+      },
+      "BundleResult": {
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "title": "Bundle Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "subject_kind": {
+            "type": "string",
+            "title": "Subject Kind"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "target_backend": {
+            "type": "string",
+            "title": "Target Backend"
+          },
+          "captures": {
+            "type": "integer",
+            "title": "Captures"
+          },
+          "raw_included": {
+            "type": "integer",
+            "title": "Raw Included"
+          },
+          "verification": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "INCOMPLETE",
+              "FAILED",
+              "UNSUPPORTED"
+            ],
+            "title": "Verification"
+          },
+          "failed_checks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed Checks",
+            "default": []
+          },
+          "unverifiable_checks": {
+            "type": "integer",
+            "title": "Unverifiable Checks",
+            "default": 0
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_id",
+          "created_at",
+          "subject_kind",
+          "subject_id",
+          "target_backend",
+          "captures",
+          "raw_included",
+          "verification",
+          "path",
+          "note"
+        ],
+        "title": "BundleResult"
+      },
+      "BundleSummary": {
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "title": "Bundle Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "subject_kind": {
+            "type": "string",
+            "title": "Subject Kind"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "target_backend": {
+            "type": "string",
+            "title": "Target Backend"
+          },
+          "captures": {
+            "type": "integer",
+            "title": "Captures"
+          },
+          "raw_included": {
+            "type": "integer",
+            "title": "Raw Included"
+          },
+          "verification": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "INCOMPLETE",
+              "FAILED",
+              "UNSUPPORTED"
+            ],
+            "title": "Verification"
+          },
+          "failed_checks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed Checks",
+            "default": []
+          },
+          "unverifiable_checks": {
+            "type": "integer",
+            "title": "Unverifiable Checks",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_id",
+          "created_at",
+          "subject_kind",
+          "subject_id",
+          "target_backend",
+          "captures",
+          "raw_included",
+          "verification"
+        ],
+        "title": "BundleSummary"
+      },
+      "DebuggerAction": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "capture_memory",
+              "inspect_registers",
+              "disassemble",
+              "set_breakpoint",
+              "single_step",
+              "resume_bounded",
+              "propose_patch"
+            ],
+            "title": "Operation"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Rationale"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4294967295.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4096.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 16.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "title": "Requires Approval",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operation",
+          "rationale"
+        ],
+        "title": "DebuggerAction"
+      },
+      "DebuggerAdvice": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Summary"
+          },
+          "hypothesis": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Hypothesis"
+          },
+          "observations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Observations",
+            "default": []
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/DebuggerAction"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Actions",
+            "default": []
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Limitations",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "hypothesis"
+        ],
+        "title": "DebuggerAdvice"
+      },
+      "DebuggerAdviceRequest": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "objective": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Objective"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_id",
+          "objective"
+        ],
+        "title": "DebuggerAdviceRequest"
+      },
+      "DebuggerStatus": {
+        "properties": {
+          "applicable": {
+            "type": "boolean",
+            "title": "Applicable"
+          },
+          "reachable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachable"
+          },
+          "version_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Ok"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "expected_version_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version Prefix"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "applicable"
+        ],
+        "title": "DebuggerStatus"
       },
       "EvidenceBundle": {
         "properties": {
@@ -1239,6 +3129,167 @@
         ],
         "title": "MemoryReadResult"
       },
+      "PatchInstruction": {
+        "properties": {
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "bytes_hex": {
+            "type": "string",
+            "title": "Bytes Hex"
+          },
+          "mnemonic": {
+            "type": "string",
+            "title": "Mnemonic"
+          },
+          "operands": {
+            "type": "string",
+            "title": "Operands"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address",
+          "bytes_hex",
+          "mnemonic",
+          "operands"
+        ],
+        "title": "PatchInstruction"
+      },
+      "PatchPreview": {
+        "properties": {
+          "patch_id": {
+            "type": "string",
+            "title": "Patch Id"
+          },
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "length": {
+            "type": "integer",
+            "title": "Length"
+          },
+          "instruction_mode": {
+            "type": "string",
+            "enum": [
+              "arm",
+              "thumb"
+            ],
+            "title": "Instruction Mode"
+          },
+          "original_hex": {
+            "type": "string",
+            "title": "Original Hex"
+          },
+          "replacement_hex": {
+            "type": "string",
+            "title": "Replacement Hex"
+          },
+          "original_sha256": {
+            "type": "string",
+            "title": "Original Sha256"
+          },
+          "replacement_sha256": {
+            "type": "string",
+            "title": "Replacement Sha256"
+          },
+          "original_instructions": {
+            "items": {
+              "$ref": "#/components/schemas/PatchInstruction"
+            },
+            "type": "array",
+            "title": "Original Instructions"
+          },
+          "replacement_instructions": {
+            "items": {
+              "$ref": "#/components/schemas/PatchInstruction"
+            },
+            "type": "array",
+            "title": "Replacement Instructions"
+          },
+          "live_execution_enabled": {
+            "type": "boolean",
+            "title": "Live Execution Enabled",
+            "default": false
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_id",
+          "address",
+          "length",
+          "instruction_mode",
+          "original_hex",
+          "replacement_hex",
+          "original_sha256",
+          "replacement_sha256",
+          "original_instructions",
+          "replacement_instructions",
+          "warnings"
+        ],
+        "title": "PatchPreview"
+      },
+      "PatchPreviewRequest": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "address": {
+            "type": "integer",
+            "maximum": 4294967295.0,
+            "minimum": 0.0,
+            "title": "Address"
+          },
+          "original_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-fA-F]{2}){1,64}$",
+            "title": "Original Hex"
+          },
+          "replacement_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-fA-F]{2}){1,64}$",
+            "title": "Replacement Hex"
+          },
+          "instruction_mode": {
+            "type": "string",
+            "enum": [
+              "arm",
+              "thumb"
+            ],
+            "title": "Instruction Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_id",
+          "address",
+          "original_hex",
+          "replacement_hex",
+          "instruction_mode"
+        ],
+        "title": "PatchPreviewRequest"
+      },
       "ReadProposal": {
         "properties": {
           "address": {
@@ -1276,6 +3327,188 @@
           "reason"
         ],
         "title": "ReadProposal"
+      },
+      "Readiness": {
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "title": "Checked At"
+          },
+          "edge": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unreachable",
+              "incompatible"
+            ],
+            "title": "Edge"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "compatible": {
+            "type": "boolean",
+            "title": "Compatible"
+          },
+          "incompatibilities": {
+            "items": {
+              "$ref": "#/components/schemas/Blocker"
+            },
+            "type": "array",
+            "title": "Incompatibilities",
+            "default": []
+          },
+          "run_ready": {
+            "type": "boolean",
+            "title": "Run Ready"
+          },
+          "live_ready": {
+            "type": "boolean",
+            "title": "Live Ready"
+          },
+          "blockers": {
+            "items": {
+              "$ref": "#/components/schemas/Blocker"
+            },
+            "type": "array",
+            "title": "Blockers",
+            "default": []
+          },
+          "status_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Age Seconds"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "target_backend": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "mock",
+                  "replay",
+                  "openocd"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Backend"
+          },
+          "debugger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DebuggerStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshots_armed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshots Armed"
+          },
+          "recovery_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Required"
+          },
+          "read_prerequisite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Prerequisite"
+          },
+          "edge_build": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "orchestrator_build": {
+            "$ref": "#/components/schemas/BuildIdentity"
+          },
+          "edge_source_drift": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Source Drift"
+          },
+          "orchestrator_source_drift": {
+            "type": "boolean",
+            "title": "Orchestrator Source Drift"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checked_at",
+          "edge",
+          "compatible",
+          "run_ready",
+          "live_ready",
+          "orchestrator_build",
+          "orchestrator_source_drift"
+        ],
+        "title": "Readiness",
+        "description": "Orchestrator's fail-closed assessment. Missing information is never positive readiness."
       },
       "Region": {
         "properties": {
@@ -1450,6 +3683,14 @@
             "title": "Registers",
             "default": []
           },
+          "acquisitions": {
+            "items": {
+              "$ref": "#/components/schemas/AcquisitionRecord"
+            },
+            "type": "array",
+            "title": "Acquisitions",
+            "default": []
+          },
           "visited_regions": {
             "items": {
               "type": "string"
@@ -1558,6 +3799,90 @@
           "request"
         ],
         "title": "RunState"
+      },
+      "RunSummary": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "firmware triage",
+              "bootloader inspection",
+              "crash investigation"
+            ],
+            "title": "Purpose"
+          },
+          "target_backend": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Target Backend"
+          },
+          "inference_backend": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "nebius"
+            ],
+            "title": "Inference Backend"
+          },
+          "model_id": {
+            "type": "string",
+            "title": "Model Id"
+          },
+          "capture_count": {
+            "type": "integer",
+            "title": "Capture Count"
+          },
+          "bytes_requested": {
+            "type": "integer",
+            "title": "Bytes Requested"
+          },
+          "elapsed_ms": {
+            "type": "number",
+            "title": "Elapsed Ms"
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "created_at",
+          "status",
+          "purpose",
+          "target_backend",
+          "inference_backend",
+          "model_id",
+          "capture_count",
+          "bytes_requested",
+          "elapsed_ms"
+        ],
+        "title": "RunSummary"
       },
       "StringObservation": {
         "properties": {
@@ -1691,6 +4016,60 @@
         ],
         "title": "TargetProfile"
       },
+      "TargetStatus": {
+        "properties": {
+          "communication": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed",
+              "unknown"
+            ],
+            "title": "Communication"
+          },
+          "execution_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "communication"
+        ],
+        "title": "TargetStatus"
+      },
+      "UartAuditRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "observe",
+              "interrupt",
+              "credential_check"
+            ],
+            "title": "Mode",
+            "default": "observe"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 10.0,
+            "title": "Timeout Seconds",
+            "default": 90
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UartAuditRequest"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -1730,6 +4109,157 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "EdgeStatus": {
+        "properties": {
+          "schema_name": {
+            "type": "string",
+            "const": "jtagent.edge.status",
+            "title": "Schema Name"
+          },
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "observed_at": {
+            "type": "string",
+            "title": "Observed At"
+          },
+          "application": {
+            "type": "string",
+            "const": "ok",
+            "title": "Application"
+          },
+          "build": {
+            "$ref": "#/components/schemas/BuildIdentity"
+          },
+          "source_drift": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Drift"
+          },
+          "debugger": {
+            "$ref": "#/components/schemas/DebuggerStatus"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TargetStatus"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "target_backend": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "replay",
+              "openocd"
+            ],
+            "title": "Target Backend"
+          },
+          "generation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Generation"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "registers",
+                "snapshot",
+                "halt",
+                "resume",
+                "step",
+                "write"
+              ]
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "recovery_required": {
+            "type": "boolean",
+            "title": "Recovery Required"
+          },
+          "snapshots_armed": {
+            "type": "boolean",
+            "title": "Snapshots Armed"
+          },
+          "retains_raw_locally": {
+            "type": "boolean",
+            "title": "Retains Raw Locally"
+          },
+          "read_prerequisite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Prerequisite"
+          },
+          "live_operations": {
+            "$ref": "#/components/schemas/LiveGate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_name",
+          "schema_version",
+          "observed_at",
+          "application",
+          "build",
+          "debugger",
+          "target",
+          "target_backend",
+          "generation",
+          "capabilities",
+          "recovery_required",
+          "snapshots_armed",
+          "retains_raw_locally",
+          "live_operations"
+        ],
+        "title": "EdgeStatus",
+        "description": "Edge status v2. The unversioned flat shape (state, target_backend, ...) is schema v1."
+      },
+      "LiveGate": {
+        "properties": {
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blockers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "allowed",
+          "blockers"
+        ],
+        "title": "LiveGate"
       },
       "MemoryReadRequest": {
         "properties": {

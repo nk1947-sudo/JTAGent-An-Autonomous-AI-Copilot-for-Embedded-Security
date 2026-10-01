@@ -22,8 +22,15 @@ delivery status.
    (scripted, or a Nebius/NVIDIA model) to reason over the returned evidence. Every
    finding is checked against evidence IDs and addresses. Rejected findings remain
    labeled rejected for auditability (`orchestrator/workflow.py`, `orchestrator/report.py`).
-3. **Dashboard** (`web/`) — a React/Vite UI for launching audits, watching the
-   agent loop live, and exporting the resulting markdown/JSON report.
+3. **Dashboard** (`web/`) — a React/Vite UI for dependency readiness, launching
+   audits, watching the agent loop live, reviewing retained run history and rejected
+   model claims, guiding UART capture, and exporting markdown/JSON reports.
+4. **Attack Lab** (`orchestrator/attack_lab.py`, `web/src/AttackLab.tsx`) — converts
+   operator objectives and retained evidence into catalogued JTAG, debug-interface,
+   firmware, fault-injection, and side-channel plans with step-level HITL decisions.
+   Its executor supports one explicit opt-in real operation: a restore-on-exit OpenOCD
+   snapshot probe over an approved region. Other attack steps remain evidence-review/dry-run;
+   it never forwards writes, firmware bytes, glitch pulses, or arbitrary commands to the edge.
 
 Both services are single Python 3.12 processes (FastAPI + uvicorn); no database is
 used. In-memory state, operator exports and provider retention are separate concerns.
@@ -70,7 +77,39 @@ The launcher defaults to mock + scripted but honors explicitly set backend varia
 It does not automatically load `.env`; use `uv run --env-file .env python scripts/demo.py`
 when deliberately supplying that configuration. Preserve an existing `.env` and never commit it.
 
+### One-command live Windows stack
+
+Connect and power the BeagleBone, then start OpenOCD, the native hardware bridge, and the
+Dockerized dashboard/orchestrator together:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_live_stack.ps1
+```
+
+To explicitly arm the real, restore-on-exit Attack Lab JTAG snapshot probe, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_live_stack.ps1 -EnableLiveJtagAttack
+```
+
+The switch does not execute an attack by itself; the operator must still approve the physical
+step in the Attack Lab. It does not enable writes or persistent firmware modification.
+
+Press `Ctrl+C` to stop everything started by the launcher. Add `-SkipBuild` after the first
+successful image build. If OpenOCD is already listening on port 6666, the launcher reuses it
+and leaves it running when the rest of the stack stops.
+The edge stays native because Docker Desktop does not directly expose Windows COM/USB devices;
+the authenticated edge API is reachable only as required by Docker's host gateway and OpenOCD
+remains bound to the host loopback interface.
+
 ## Running the services manually
+
+The dashboard also includes an **AI Workbench**. After a real JTAG snapshot, it displays retained
+memory/register evidence, requests typed debugger guidance from the configured model, and validates
+equal-length ARM/Thumb patches offline. See [the merged workbench and live-debugger plan](docs/ai-firmware-workbench.md).
+
+Patch preview does not write hardware. Volatile JTAG patch execution remains locked until snapshot,
+read-back, bounded execution, and automatic rollback are implemented.
 
 ```powershell
 uv sync --frozen --python 3.12
@@ -120,9 +159,14 @@ before starting it. Use the same hostname in the browser so origin checks match.
 | `nebius` | NVIDIA model inference through Nebius Token Factory; this does not imply compute deployment (`NEBIUS_BASE_URL`, `NEBIUS_MODEL`, `NEBIUS_API_KEY`, `NEBIUS_VERIFIED_CONTEXT_TOKENS`, `NEBIUS_MAX_OUTPUT_TOKENS`) |
 
 Other notable environment variables: `MAX_READ_BYTES`, `ARM_SNAPSHOTS`,
-`REDACT_VALUES`, `PUBLIC_ORIGIN`, `COOKIE_SECURE`. LangSmith/LangChain tracing is
+`REDACT_VALUES`, `PUBLIC_ORIGIN`, `COOKIE_SECURE`. Set `UART_AUDIT_ENABLED=1`,
+`UART_PORT`, and optional local `UART_AUDIT_USERNAME`/`UART_AUDIT_PASSWORD` to expose
+the dashboard's bounded UART assessment. LangSmith/LangChain tracing is
 force-disabled by the orchestrator entrypoint. Live raw bytes are withheld at the edge;
 approved derived evidence is sent to the provider only when Nebius mode is explicitly selected.
+Set optional `NEBIUS_INPUT_USD_PER_MILLION` and `NEBIUS_OUTPUT_USD_PER_MILLION`
+display rates to show a run-cost estimate from provider token usage. These rates are
+operator-supplied display metadata, not billing records.
 
 ## Testing
 
@@ -157,6 +201,7 @@ npm --prefix web run types
 | `scripts/nebius_smoke.py` | Opt-in gate that sends one synthetic bounded task to a configured Nebius endpoint |
 | `scripts/nebius_audit.py` | Opt-in full LangGraph audit using synthetic target evidence and real Nebius inference |
 | `scripts/generate_contracts.py` | Regenerates `contracts/openapi.json` from both FastAPI apps |
+| `scripts/record_dashboard_demo.mjs` | Records a captioned, credential-safe dashboard walkthrough to `artifacts/SiliconSentinel-comprehensive-demo.webm` using isolated mock services on ports 8100/8101 |
 
 ## Security notes
 
@@ -169,6 +214,15 @@ npm --prefix web run types
   as suspected/inconclusive or rejected. It does not establish real-world vulnerabilities.
 - Credential patterns and configured sensitive values are redacted at the edge;
   pattern matching cannot identify every secret (`analysis/evidence.py`).
+- UART audits run only three fixed modes: passive capture, one Space to interrupt U-Boot, or a
+  configured-account check limited to identity/kernel/passwordless-sudo detection followed by logout.
+  Credentials remain in the local edge environment and are not accepted in API requests.
+- Attack Lab recommendations are restricted to a typed module catalog. Authorization acknowledgement,
+  per-step approval, pause/resume, emergency abort, and an event log are enforced server-side. Set
+  `ATTACK_LAB_LIVE_JTAG=1` to arm the real JTAG snapshot probe after reviewing recovery; it temporarily
+  halts through the edge snapshot primitive, reads at most 64 approved bytes and registers, restores the
+  target, and records evidence. Fault injection, side-channel capture, live writes, and firmware
+  modification remain unavailable until separate hardware adapters and recovery controls are validated.
 - Orchestrator runs expire after one hour or can be deleted. The bounded edge operation
   ledger keeps sanitized results until restart. Exports are operator-managed; provider
   retention is unverified. No database does not establish zero retention.
@@ -185,3 +239,12 @@ default test suite.
 See [live integration gates](docs/live-integration.md) and the [three-minute demo](docs/demo.md).
 Management files such as PRD.md and BUG_TRACKER.md remain locally ignored under the operator's policy;
 the tracked architecture and milestone summary provide the status in a fresh clone.
+
+## Status, evidence bundles and live validation (2026-09-30)
+- Status contract, build identity and fail-closed readiness: [docs/status-and-evidence.md](docs/status-and-evidence.md).
+- Export a local evidence bundle from the dashboard, then verify it offline with
+  `uv run python scripts/verify_bundle.py exports/<bundle>` (exit 0 verified, 2 incomplete/no raw bytes, 1 failed).
+- Before restarting services, checkpoint in-memory evidence: `uv run python scripts/export_retained_evidence.py`;
+  restart natively with `scripts/restart_native_services.ps1` (OpenOCD is never touched; arming is opt-in).
+- Browser tests are isolated from the live stack: `npm --prefix web test` (mock + scripted, own ports).
+- Prepared, not yet executed on hardware: [docs/live-validation-procedure.md](docs/live-validation-procedure.md).

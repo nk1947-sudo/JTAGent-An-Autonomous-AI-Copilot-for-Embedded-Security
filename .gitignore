@@ -32,3 +32,10 @@ CLAUDE.md
 .codex/
 .cursor/
 .claude/
+.presentation-build
+/output
+# Local evidence bundles and retained-evidence checkpoints (may hold raw target bytes)
+/exports/
+/evidence-checkpoints/
+# Generated at build time from contracts/openapi.json
+web/src/generated/validators.js

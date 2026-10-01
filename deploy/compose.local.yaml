@@ -1,0 +1,10 @@
+services:
+  console:
+    environment:
+      # A container reaches the authenticated Windows edge through Docker's host alias.
+      EDGE_API_URL: http://host.docker.internal:8001
+      COOKIE_SECURE: "0"
+      PUBLIC_ORIGIN: http://127.0.0.1:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+

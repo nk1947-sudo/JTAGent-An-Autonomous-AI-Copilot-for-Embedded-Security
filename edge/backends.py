@@ -158,11 +158,12 @@ class OpenOCDBackend:
         if not version_prefix:
             raise ValueError("OPENOCD_VERSION_PREFIX required after local command review")
         self.rpc, self.target, self.version_prefix = rpc, target, version_prefix
-        self.generation, self.ready = 0, False
+        self.generation, self.ready, self.version = 0, False, None
 
     async def status(self):
         if not self.ready:
             version = await self.rpc.command("version")
+            self.version = version[:120]
             if not version.startswith(self.version_prefix):
                 raise BackendError("openocd_version_mismatch")
             # Tcl RPC notifications and trace output default to off. Do not send
@@ -174,9 +175,18 @@ class OpenOCDBackend:
             raise BackendError("malformed_target_state")
         return state
 
+    @staticmethod
+    def failed(reply):
+        """OpenOCD reports many Tcl failures as ordinary reply text with no fixed prefix."""
+        return not reply or re.search(
+            r"\b(fail|failed|error|unable|cannot|not halted|timed? ?out)\b", reply, re.IGNORECASE
+        )
+
     async def read(self, address, length, space):
         suffix = " phys" if space == "physical" else ""
         reply = await self.rpc.command(f"{self.target} read_memory {address} 8 {length}{suffix}")
+        if self.failed(reply):
+            raise BackendError("memory_read_failed")
         try:
             numbers = [int(n, 0) for n in reply.split()]
             if len(numbers) > length:
@@ -189,6 +199,8 @@ class OpenOCDBackend:
         if any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", n) for n in names):
             raise BackendError("invalid_register")
         reply = await self.rpc.command(f"{self.target} get_reg -force {{{' '.join(names)}}}")
+        if self.failed(reply):
+            raise BackendError("register_read_failed")
         try:
             parts = reply.split()
             values = {parts[i]: int(parts[i + 1], 0) for i in range(0, len(parts), 2)}
