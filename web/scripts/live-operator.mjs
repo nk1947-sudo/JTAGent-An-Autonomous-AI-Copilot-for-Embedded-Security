@@ -9,7 +9,7 @@ const output = path.join(root, 'tmp', 'acceptance-live');
 const password = process.env.JTAGENT_DASHBOARD_PASSWORD;
 if (!password) throw new Error('JTAGENT_DASHBOARD_PASSWORD is required');
 const action = process.argv[2];
-if (!['inspect', 'audit', 'inspect-run', 'attack-plan', 'workbench-accept', 'auth-cycle', 'uart-passive'].includes(action)) throw new Error('Unknown live operator action');
+if (!['inspect', 'inventory', 'audit', 'inspect-run', 'attack-plan', 'workbench-accept', 'auth-cycle', 'uart-passive'].includes(action)) throw new Error('Unknown live operator action');
 await mkdir(output, { recursive: true });
 
 const errors = [];
@@ -52,6 +52,38 @@ try {
     const summary = { verdict, profile, mode, regions, memoryMap, history, layers, screenshots: ['live-readiness.png', 'live-attack-lab.png', 'live-workbench.png'] };
     await writeFile(path.join(output, 'read-only-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
     console.log(JSON.stringify({ ...summary, mode: mode.split('\n').filter(line => line.includes('TARGET') || line.includes('ANALYSIS')) }));
+  }
+  if (action === 'inventory') {
+    const [runResponse, planResponse, exportResponse] = await Promise.all([
+      page.request.get('http://127.0.0.1:8000/api/runs'),
+      page.request.get('http://127.0.0.1:8000/api/attack-lab/plans'),
+      page.request.get('http://127.0.0.1:8000/api/exports'),
+    ]);
+    if (![runResponse, planResponse, exportResponse].every(response => response.ok())) throw new Error('Authenticated inventory request failed');
+    const runs = await runResponse.json(), plans = await planResponse.json(), exports = await exportResponse.json();
+    const planIds = plans.map(item => item.plan_id);
+    if (await page.locator('.run-history button').count() !== runs.length) throw new Error('Rendered run history disagrees with the authenticated inventory');
+    await safeScreenshot(page, path.join(output, 'live-inventory-investigation.png'));
+    await page.getByRole('button', { name: 'Attack Lab', exact: true }).click();
+    const planSelect = page.getByLabel('Saved Attack Lab plans');
+    for (const plan of plans) {
+      await planSelect.selectOption(plan.plan_id);
+      const reportJson = page.getByRole('link', { name: 'Export JSON', exact: true });
+      const reportMarkdown = page.getByRole('link', { name: 'Export Markdown', exact: true });
+      if (!(await reportJson.getAttribute('href'))?.endsWith(`/api/attack-lab/plans/${plan.plan_id}/report.json`) || !(await reportMarkdown.getAttribute('href'))?.endsWith(`/api/attack-lab/plans/${plan.plan_id}/report.md`) || await page.getByRole('button', { name: 'Export evidence bundle' }).count() !== 1) throw new Error('Rendered plan report or bundle control is unavailable');
+    }
+    await safeScreenshot(page, path.join(output, 'live-inventory-attack-lab.png'));
+    await page.getByRole('button', { name: 'AI Workbench', exact: true }).click();
+    const workbenchSelect = page.getByLabel('JTAG evidence plan');
+    for (const plan of plans) {
+      await workbenchSelect.selectOption(plan.plan_id);
+      await page.getByText(plan.captures?.length ? 'EVIDENCE LINKED' : 'NO CAPTURE', { exact: true }).waitFor();
+    }
+    await safeScreenshot(page, path.join(output, 'live-inventory-workbench.png'));
+    const exportedSubjects = exports.map(item => `${item.subject_kind}:${item.subject_id}`);
+    const summary = { verdict, runs: runs.map(item => ({ run_id: item.run_id, status: item.status, capture_count: item.capture_count, exported: exportedSubjects.includes(`run:${item.run_id}`) })), plans: plans.map(item => ({ plan_id: item.plan_id, source_run_id: item.source_run_id, status: item.status, capture_count: item.captures?.length, exported: exportedSubjects.includes(`attack_plan:${item.plan_id}`) })), exports: exports.map(item => ({ bundle_id: item.bundle_id, subject_kind: item.subject_kind, subject_id: item.subject_id, verification: item.verification, raw_included: item.raw_included })), rendered_run_count: runs.length, rendered_plan_ids: planIds, screenshots: ['live-inventory-investigation.png', 'live-inventory-attack-lab.png', 'live-inventory-workbench.png'] };
+    await writeFile(path.join(output, 'live-inventory-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+    console.log(JSON.stringify(summary));
   }
   if (action === 'audit') {
     const selected = page.locator('.region input[type="checkbox"]');
