@@ -298,10 +298,14 @@ try {
     const config = await response.json();
     if (config.uart?.enabled !== true || config.uart?.port !== 'COM12' || config.uart?.baud !== 115200) throw new Error('Reviewed COM12/115200 UART auditor is not configured');
     await page.getByLabel('Fixed audit mode').selectOption('observe');
-    const [auditResponse] = await Promise.all([
-      page.waitForResponse(result => safePath(result.url()) === '/api/uart/audit' && result.request().method() === 'POST', { timeout: 110000 }),
-      page.getByRole('button', { name: 'Arm UART audit' }).click(),
-    ]);
+    const auditRequestPromise = page.waitForRequest(request => safePath(request.url()) === '/api/uart/audit' && request.method() === 'POST');
+    const auditResponsePromise = page.waitForResponse(result => safePath(result.url()) === '/api/uart/audit' && result.request().method() === 'POST', { timeout: 110000 });
+    await page.getByRole('button', { name: 'Arm UART audit' }).click();
+    await auditRequestPromise;
+    await page.getByText('armed — power-cycle the board within 90 seconds').waitFor();
+    const earlyResponse = await Promise.race([auditResponsePromise, page.waitForTimeout(8000).then(() => null)]);
+    if (!earlyResponse) console.log('UART_RECEIVE_REQUEST_IN_FLIGHT');
+    const auditResponse = earlyResponse ?? await auditResponsePromise;
     if (!auditResponse.ok()) throw new Error(`Passive UART observation returned HTTP ${auditResponse.status()}`);
     const result = await auditResponse.json();
     if (result.mode !== 'observe' || result.port !== 'COM12' || result.baud !== 115200) throw new Error('UART result does not match the reviewed passive configuration');
