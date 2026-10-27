@@ -1,7 +1,16 @@
 import { defineConfig } from '@playwright/test';
+
+// Browser tests never reuse the live 8000/8001 stack. The global setup launches scripts/test_stack.py,
+// which allocates its own ports, forces MOCK target + SCRIPTED inference, strips inherited live
+// configuration, and removes only the processes it started. baseURL is supplied per test from that
+// stack (see e2e/fixtures.ts).
 export default defineConfig({
- testDir:'.', testMatch:'demo.spec.ts', use:{baseURL:'http://127.0.0.1:8000',headless:true,viewport:{width:1500,height:1000}},
- webServer:{command:'uv run --project .. python ../scripts/demo.py --skip-build',
-  url:'http://127.0.0.1:8000/healthz',reuseExistingServer:false,timeout:30000,
-  env:{DASHBOARD_PASSWORD:'browser-test-password',TARGET_BACKEND:'mock',INFERENCE_BACKEND:'scripted'}},
+  testDir: 'e2e',
+  testMatch: '*.spec.ts',
+  globalSetup: './e2e/global-setup.ts',
+  workers: 1,
+  fullyParallel: false,
+  retries: 0,
+  timeout: 60_000,
+  use: { headless: true, viewport: { width: 1500, height: 1000 } },
 });

@@ -45,6 +45,12 @@ A lost connection cannot prove exactly-once execution. Never blindly replay a fa
 A host crash or power loss cannot be recovered by an in-process watchdog; the operator must reconcile.
 Independent mock controls have a maximum ten-second lease and restore only a CPU they halted.
 
+The optional UART auditor is separately armed with `UART_AUDIT_ENABLED=1` and an explicit serial
+device such as `UART_PORT=COM12`. It supports passive boot observation, one Space character during
+the documented autoboot window, and a configured-account check containing only `id`, `uname -r` and
+`sudo -n id`, followed by logout. Credentials are edge-process environment values, never API fields,
+events or provider prompts. The operator must power-cycle the target after arming an audit.
+
 Physical exit gate: read known memory/registers in an authorized session, demonstrate restoration,
 unplug/failure handling and compare bytes with an independent manual debugger read from a compatible
 snapshot. On 2026-09-25, the C232HM/AM335x scan chain was verified and an authenticated live snapshot
@@ -54,6 +60,15 @@ no recovery flag was raised. Disconnect handling and independent byte comparison
 At the configured 100 kHz adapter speed, direct measurements were 262.62 ms for 16 bytes,
 843.22 ms for 64 bytes and 3074.85 ms for 256 bytes. The initial live profile is therefore capped
 at 64 bytes to keep each hardware read below the two-second transport timeout.
+
+## Real Attack Lab JTAG probe
+
+The only currently implemented physical Attack Lab executor is a bounded OpenOCD snapshot probe.
+Arm it explicitly with `ATTACK_LAB_LIVE_JTAG=1` on the orchestrator and restart the service. The
+selected live profile must authorize `snapshot`, `halt`, and `resume`, and the edge must already have
+`ARM_SNAPSHOTS=1`. After step-level HITL approval, the probe reads no more than 64 bytes from the first
+approved region, captures registers, verifies restoration and records the returned evidence ID. It does
+not write memory or flash. Leave the flag disabled if the recovery path has not been checked.
 
 ## Nebius
 Token Factory inference and Nebius compute hosting are separate. The code requires explicit
@@ -65,8 +80,14 @@ verify this account, exact hosted limits or its enabled retention settings.
 The adapter checks model visibility and requires a native schema-valid tool call. Unsupported
 responses stop the run. It never executes free-form generated commands. Requests have a five-second
 connect timeout and 30-second response timeout within the total run deadline. Only 429/502/503/504
-receive one bounded retry. Usage is recorded only when supplied by the provider; costs are not invented.
+receive one bounded retry. A retryable server error can still duplicate billable work if the provider
+completed a request before returning the error. Usage is recorded only when supplied by the provider;
+costs are not invented.
 Plain JSON-mode compatibility is not assumed or used as an unverified fallback.
+For `openocd` targets, audit planning/analysis, Attack Lab recommendations and debugger advice are
+denied unless `NEBIUS_LIVE_EVIDENCE_ENABLED=1` is set. Leave it unset until a separate live-data
+authorization and retention review are complete. Mock and replay workflows remain available without
+this opt-in.
 
 With credentials and verified configuration, explicitly opt into a minimal potentially billable check:
 ```sh
@@ -78,7 +99,10 @@ uv run --env-file .env python scripts/nebius_audit.py --allow-paid-inference
 ```
 On 2026-09-25, the configured Nemotron model passed visibility and native tool-call checks, then the
 full synthetic audit completed with a bounded request, captured evidence, validated schema, verified
-references and no errors. No live-target evidence was sent to Nebius.
+references and no errors. The separate dashboard manual test from that date also records paid Nebius
+runs using derived evidence from physical 64-byte captures. Those are historical results, not current
+authorization for another hosted request or for sending live-target evidence. No new hosted or
+physical-hardware action was performed for the current handoff.
 Provider retention remains unknown until the account settings/contract are checked.
 
 ## Deployment
@@ -87,6 +111,12 @@ does not run OpenOCD or an edge container. Configure the authenticated HTTPS bri
 PUBLIC_ORIGIN and TLS reverse proxy. COOKIE_SECURE=1 is required for HTTPS deployment.
 Use separate process secrets and one worker. Healthz is only process liveness, not target readiness.
 No public deployment or paid resources were created. Docker daemon verification is pending.
+
+For a local Windows hardware session, `scripts/start_live_stack.ps1` starts or reuses OpenOCD,
+starts the authenticated edge on the host, and starts the console in Docker with the local Compose
+override. This preserves access to the Windows FTDI/COM devices while reducing startup and shutdown
+to one command. OpenOCD stays on loopback; press Ctrl+C in the launcher terminal to stop everything
+that launcher started.
 
 ## Official references checked
 - [OpenOCD Tcl RPC](https://openocd.org/doc/html/Tcl-Scripting-API.html): 0x1a framing and disabled notifications.

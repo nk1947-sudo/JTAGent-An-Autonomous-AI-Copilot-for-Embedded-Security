@@ -14,8 +14,8 @@ from contracts.models import AuditRequest, RunState, TargetProfile
 from edge.app import create_app
 from edge.backends import MockBackend
 from edge.service import EdgeService
-from orchestrator.inference import NebiusInference
 from orchestrator.workflow import Workflow
+from scripts.hosted_observation import ObservedNebius
 
 
 class LocalEdge:
@@ -45,7 +45,7 @@ async def main():
 
     profile = TargetProfile.model_validate_json(Path("config/demo.json").read_text())
     service = EdgeService(MockBackend("demo"), profile, arm_snapshots=True)
-    provider = NebiusInference()
+    provider = ObservedNebius(max_completions=3)
     edge = LocalEdge(service)
     run = RunState(
         target_backend="mock",
@@ -66,6 +66,8 @@ async def main():
         await Workflow(run, edge, provider, asyncio.Event()).execute()
     finally:
         await edge.close()
+        print(json.dumps({"request_observation": provider.observation()}))
+        await provider.close()
 
     print(
         json.dumps(
@@ -73,6 +75,7 @@ async def main():
                 "status": run.status,
                 "termination_reason": run.termination_reason,
                 "model": run.model_id,
+                "returned_models": provider.returned_models,
                 "captures": len(run.captures),
                 "register_snapshots": len(run.registers),
                 "findings": [

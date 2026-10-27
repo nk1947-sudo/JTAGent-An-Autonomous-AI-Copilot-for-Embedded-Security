@@ -29,8 +29,8 @@ def sanitize_data(value):
     return value
 
 
-def derive(data, address, region, profile, source, evidence_id):
-    digest = hashlib.sha256(data).hexdigest()
+def extract_strings(data, address):
+    """Printable ASCII runs of 4+ bytes with exact offsets; pattern secrets are redacted."""
     strings = []
     for match in re.finditer(rb"[ -~]{4,}", data):
         original = match.group().decode("ascii")
@@ -40,19 +40,26 @@ def derive(data, address, region, profile, source, evidence_id):
                 address=address + match.start(), offset=match.start(), text=clean, redacted=clean != original
             )
         )
+    return strings
+
+
+def decode_instructions(data, address, instruction_mode, endianness):
+    """Capstone ARM/Thumb decode from explicit settings; the authoritative decoder."""
+    mode = capstone.CS_MODE_ARM if instruction_mode == "arm" else capstone.CS_MODE_THUMB
+    mode |= capstone.CS_MODE_LITTLE_ENDIAN if endianness == "little" else capstone.CS_MODE_BIG_ENDIAN
+    return [
+        Instruction(address=i.address, size=i.size, mnemonic=i.mnemonic, operands=i.op_str)
+        for i in capstone.Cs(capstone.CS_ARCH_ARM, mode).disasm(data, address)
+    ]
+
+
+def derive(data, address, region, profile, source, evidence_id):
+    digest = hashlib.sha256(data).hexdigest()
+    strings = extract_strings(data, address)
     sensitive = any(s.redacted for s in strings)
     instructions = []
-    if region.executable:
-        mode = capstone.CS_MODE_ARM if region.instruction_mode == "arm" else capstone.CS_MODE_THUMB
-        mode |= (
-            capstone.CS_MODE_LITTLE_ENDIAN if profile.endianness == "little" else capstone.CS_MODE_BIG_ENDIAN
-        )
-        decoded = list(capstone.Cs(capstone.CS_ARCH_ARM, mode).disasm(data, address))
-        if not sensitive:
-            instructions = [
-                Instruction(address=i.address, size=i.size, mnemonic=i.mnemonic, operands=i.op_str)
-                for i in decoded
-            ]
+    if region.executable and not sensitive:
+        instructions = decode_instructions(data, address, region.instruction_mode, profile.endianness)
     withheld = sensitive or source != "mock"
     return EvidenceBundle(
         evidence_id=evidence_id,
