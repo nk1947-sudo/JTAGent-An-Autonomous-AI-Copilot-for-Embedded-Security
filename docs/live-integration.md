@@ -80,8 +80,14 @@ verify this account, exact hosted limits or its enabled retention settings.
 The adapter checks model visibility and requires a native schema-valid tool call. Unsupported
 responses stop the run. It never executes free-form generated commands. Requests have a five-second
 connect timeout and 30-second response timeout within the total run deadline. Only 429/502/503/504
-receive one bounded retry. Usage is recorded only when supplied by the provider; costs are not invented.
+receive one bounded retry. A retryable server error can still duplicate billable work if the provider
+completed a request before returning the error. Usage is recorded only when supplied by the provider;
+costs are not invented.
 Plain JSON-mode compatibility is not assumed or used as an unverified fallback.
+For `openocd` targets, audit planning/analysis, Attack Lab recommendations and debugger advice are
+denied unless `NEBIUS_LIVE_EVIDENCE_ENABLED=1` is set. Leave it unset until a separate live-data
+authorization and retention review are complete. Mock and replay workflows remain available without
+this opt-in.
 
 With credentials and verified configuration, explicitly opt into a minimal potentially billable check:
 ```sh
@@ -93,7 +99,10 @@ uv run --env-file .env python scripts/nebius_audit.py --allow-paid-inference
 ```
 On 2026-09-25, the configured Nemotron model passed visibility and native tool-call checks, then the
 full synthetic audit completed with a bounded request, captured evidence, validated schema, verified
-references and no errors. No live-target evidence was sent to Nebius.
+references and no errors. The separate dashboard manual test from that date also records paid Nebius
+runs using derived evidence from physical 64-byte captures. Those are historical results, not current
+authorization for another hosted request or for sending live-target evidence. No new hosted or
+physical-hardware action was performed for the current handoff.
 Provider retention remains unknown until the account settings/contract are checked.
 
 ## Deployment

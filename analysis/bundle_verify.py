@@ -308,6 +308,19 @@ def verify_bundle(bundle_dir) -> Result:
                 "fail",
                 "acquisition names another capture",
             )
+    for index, acquisition in enumerate(manifest.get("acquisitions", [])):
+        if not isinstance(acquisition, dict):
+            result.add(f"acquisition:{index}", "fail", "acquisition record is malformed")
+            continue
+        evidence_id = acquisition.get("evidence_id")
+        if evidence_id is not None and evidence_id not in known:
+            result.add(f"acquisition:{index}:link", "fail", "capture is not in the bundle")
+        if acquisition.get("error_code"):
+            result.add(
+                f"acquisition:{index}:outcome",
+                "skip",
+                "failed snapshot attempt cannot be independently verified as a completed capture",
+            )
 
     # 4. Reports must agree with the manifest.
     subject = manifest["subject"]
@@ -334,6 +347,8 @@ def verify_bundle(bundle_dir) -> Result:
                 result.add("report_json_captures", "fail", "capture ids or hashes differ from manifest")
             else:
                 result.add("report_json_captures", "pass", f"{len(manifest_hashes)} captures agree")
+            if "acquisitions" in manifest and report.get("acquisitions") != manifest["acquisitions"]:
+                result.add("report_json_acquisitions", "fail", "acquisition records differ from manifest")
         absent = [
             c["evidence_id"]
             for c in manifest["captures"]
@@ -347,6 +362,13 @@ def verify_bundle(bundle_dir) -> Result:
             )
         else:
             result.add("report_markdown_links", "pass", "every evidence id and hash appears in report.md")
+        missing_errors = [
+            a["error_code"]
+            for a in manifest.get("acquisitions", [])
+            if isinstance(a, dict) and a.get("error_code") and a["error_code"] not in markdown
+        ]
+        if missing_errors:
+            result.add("report_markdown_acquisitions", "fail", "failed attempts omitted from report.md")
         unlinked = [
             c["evidence_id"]
             for c in manifest["captures"]

@@ -161,6 +161,10 @@ class OpenOCDBackend:
         self.generation, self.ready, self.version = 0, False, None
 
     async def status(self):
+        # A dropped Tcl connection can reconnect to a different OpenOCD process.
+        # Its version must be checked before treating that new connection as ready.
+        if getattr(self.rpc, "writer", object()) is None:
+            self.ready = False
         if not self.ready:
             version = await self.rpc.command("version")
             self.version = version[:120]

@@ -248,16 +248,19 @@ class Readiness(Model):
 class AcquisitionRecord(Model):
     """How one snapshot was obtained. Absent for captures made before this was recorded."""
 
-    evidence_id: str
+    evidence_id: str | None
     register_evidence_id: str | None = None
     method: str
     backend: Mode
     debugger_version: str | None = None
     halted_by_edge: bool
-    initial_state: str
-    capture_state: str
+    initial_state: str | None
+    capture_state: str | None
     final_state: str | None = None
     restoration: str
+    error_code: str | None = None
+    restoration_error_code: str | None = None
+    outcome_uncertain: bool = False
     recovery_required: bool
     generation_before: int
     generation_after: int
@@ -367,7 +370,7 @@ class RunState(Model):
     run_id: str = Field(default_factory=uid)
     status: str = "queued"
     target_backend: Mode
-    inference_backend: Literal["scripted", "nebius"]
+    inference_backend: Literal["scripted", "nebius", "ollama"]
     model_id: str
     profile: TargetProfile
     request: AuditRequest
@@ -396,7 +399,7 @@ class RunSummary(Model):
     status: str
     purpose: Literal["firmware triage", "bootloader inspection", "crash investigation"]
     target_backend: Mode
-    inference_backend: Literal["scripted", "nebius"]
+    inference_backend: Literal["scripted", "nebius", "ollama"]
     model_id: str
     capture_count: int
     bytes_requested: int
@@ -472,6 +475,7 @@ class AttackPlan(Model):
     plan_id: str = Field(default_factory=uid)
     created_at: str = Field(default_factory=now)
     target_id: str
+    source_run_id: str | None = None
     module_id: AttackModuleId
     category: AttackCategory
     objective: str

@@ -201,29 +201,41 @@ class Workflow:
         ).model_dump()
         result = await self.edge.post("/api/v1/snapshots/capture", body)
         self.run.tool_latencies_ms.append(result["duration_ms"])
-        if not result["success"]:
-            self.run.errors.append(result["error_code"])
-            self.run.termination_reason = "dependency_failure"
-            raise StopRun()
-        capture = MemoryReadResult.model_validate(result["data"]["memory"])
-        self.run.captures.append(capture)
-        self.run.registers.append(RegisterSnapshot.model_validate(result["data"]["registers"]))
-        if result["data"].get("acquisition"):
+        data = result.get("data") or {}
+        capture = MemoryReadResult.model_validate(data["memory"]) if data.get("memory") else None
+        if capture:
+            self.run.captures.append(capture)
+            self.run.visited_regions.append(
+                f"{capture.address_space}:0x{capture.base_address:08x}+{capture.returned_length}"
+            )
+            if capture.partial:
+                self.run.errors.append("Partial read at " + hex(capture.base_address))
+        if data.get("registers"):
+            self.run.registers.append(RegisterSnapshot.model_validate(data["registers"]))
+        if data.get("acquisition"):
             self.run.acquisitions.append(
                 AcquisitionRecord.model_validate(
-                    {**result["data"]["acquisition"], "orchestrator_build_id": self.build_id}
+                    {**data["acquisition"], "orchestrator_build_id": self.build_id}
                 )
             )
-        self.run.visited_regions.append(
-            f"{capture.address_space}:0x{capture.base_address:08x}+{capture.returned_length}"
-        )
-        if capture.partial:
-            self.run.errors.append("Partial read at " + hex(capture.base_address))
+        if not result["success"]:
+            self.run.errors.append(result.get("error_code") or "snapshot_failed")
+            self.run.termination_reason = "dependency_failure"
+            self.event(
+                "collector",
+                "Snapshot failed; any returned capture is incomplete attempt evidence",
+                error_code=result.get("error_code"),
+                restoration=data.get("restoration"),
+                outcome_uncertain=result.get("outcome_uncertain", False),
+            )
+            raise StopRun()
+        if capture is None or not data.get("registers"):
+            raise ValueError("Snapshot response omitted evidence")
         self.event(
             "collector",
             "Snapshot returned; target restoration completed locally",
             evidence_id=capture.evidence_id,
-            restoration=result["data"]["restoration"],
+            restoration=data["restoration"],
         )
         return {}
 
@@ -237,11 +249,12 @@ class Workflow:
         self.run.analysis_iterations += 1
         self.event("analyst", "Interpreting compact evidence; target data is untrusted")
         started = time.perf_counter()
-        self.analysis = await self.inference.analyze(
-            self.run.captures, self.run.registers, self.run.request.purpose
-        )
-        self.run.inference_latencies_ms.append((time.perf_counter() - started) * 1000)
-        self.run.provider_usage = list(self.inference.usage)
+        try:
+            self.analysis = await self.inference.analyze(
+                self.run.captures, self.run.registers, self.run.request.purpose
+            )
+        finally:
+            self.run.inference_latencies_ms.append((time.perf_counter() - started) * 1000)
         return {}
 
     async def verifier(self, state):
@@ -274,6 +287,10 @@ class Workflow:
             self.run.errors.append(type(exc).__name__)
             self.run.termination_reason = "dependency_failure"
             self.event("error", "A dependency failed; inspect local configuration. No fixture fallback.")
+        digest = getattr(self.inference, "model_digest", None)
+        if self.run.inference_backend == "ollama" and digest:
+            self.run.model_id = f"{self.inference.model_id}@sha256:{digest}"
+        self.run.provider_usage = list(self.inference.usage)
         self.run.elapsed_ms = (time.perf_counter() - self.started) * 1000
         reason = self.run.termination_reason
         self.run.status = (

@@ -18,6 +18,9 @@ verified in the working tree but is not yet committed.
 - The configured Nebius account exposed `nvidia/nemotron-3-super-120b-a12b`. A real native tool-call
   smoke used 1230 tokens, followed by a complete synthetic-evidence LangGraph audit with two provider
   calls (1199 and 3212 tokens), one capture, verified references and no errors.
+- The separate 2026-09-25 dashboard manual record also documents paid Nebius inference over derived
+  evidence from physical 64-byte captures. This historical live-data use is distinct from the
+  synthetic audit above and does not authorize future hosted transmission.
 - A bounded UART audit is available through the authenticated edge and dashboard APIs. Its fixed modes
   passively observe boot, send one autoboot-interrupt character, or run the reviewed credential check
   (`id`, `uname -r`, and non-interactive `sudo id`) before logging out. It does not accept arbitrary

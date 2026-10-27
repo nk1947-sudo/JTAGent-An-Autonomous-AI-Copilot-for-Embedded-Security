@@ -319,3 +319,51 @@ async def test_attack_plan_markdown_and_bundle_carry_the_capture_detail(raw_serv
     manifest = json.loads((bundle_path(result) / "manifest.json").read_text())
     assert manifest["captures"][0]["acquisition"]["restoration"] == "running"
     assert manifest["subject"]["id"] == pid
+
+
+async def test_run_linked_plan_retains_source_evidence_without_claiming_new_physical_probe(
+    raw_service, profile
+):
+    client = await client_for(LocalEdge(raw_service))
+    run = await finished_run(client, profile)
+    assert run["status"] == "completed" and len(run["captures"]) == 2
+    response = await client.post(
+        "/api/attack-lab/plans",
+        json={
+            "target_id": profile.target_id,
+            "module_id": "firmware-integrity-assessment",
+            "objective": "Review existing mock firmware evidence",
+            "run_id": run["run_id"],
+            "authorization_acknowledged": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+    plan = response.json()
+    assert plan["source_run_id"] == run["run_id"]
+    assert plan["captures"] == run["captures"]
+    assert plan["registers"] == run["registers"]
+    assert plan["acquisitions"] == run["acquisitions"]
+    raw_hexes = [c["evidence"]["approved_hex"] for c in run["captures"] if c["evidence"].get("approved_hex")]
+    assert raw_hexes
+    assert (await client.delete(f"/api/runs/{run['run_id']}")).status_code == 200
+    retained = (await client.get(f"/api/attack-lab/plans/{plan['plan_id']}")).json()
+    assert retained["captures"] == run["captures"]
+    report = (await client.get(f"/api/attack-lab/plans/{plan['plan_id']}/report.json")).json()
+    assert report["source_run_id"] == run["run_id"]
+    assert report["physical_execution_performed"] is False
+    assert all("approved_hex" not in capture["evidence"] for capture in report["captures"])
+    markdown = (await client.get(f"/api/attack-lab/plans/{plan['plan_id']}/report.md")).text
+    assert f"Source run: `{run['run_id']}`" in markdown
+    assert all(raw_hex not in markdown for raw_hex in raw_hexes)
+    exported = await export(client, f"/api/attack-lab/plans/{plan['plan_id']}/bundle", False)
+    assert exported["verification"] == "INCOMPLETE" and exported["raw_included"] == 0
+    bundle = bundle_path(exported)
+    assert not list((bundle / "captures").glob("*.bin"))
+    bundle_report = json.loads((bundle / "report.json").read_text())
+    assert bundle_report["source_run_id"] == run["run_id"]
+    assert all("approved_hex" not in capture["evidence"] for capture in bundle_report["captures"])
+    assert all(raw_hex not in (bundle / "report.md").read_text() for raw_hex in raw_hexes)
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    assert {entry["evidence_id"] for entry in manifest["captures"]} == {
+        capture["evidence_id"] for capture in run["captures"]
+    }

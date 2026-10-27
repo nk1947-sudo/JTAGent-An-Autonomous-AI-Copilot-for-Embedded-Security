@@ -29,6 +29,11 @@ class LocalEdge:
         r.raise_for_status()
         return r.json()
 
+    async def delete(self, path):
+        r = await self.client.delete(path)
+        r.raise_for_status()
+        return r.json()
+
 
 def run_state(profile, **overrides):
     return RunState(
@@ -143,7 +148,9 @@ async def test_verifier_rejects_fabricated_evidence(service, profile):
     assert verify([f], run)[0].status == "suspected"
 
 
-async def test_dashboard_auth_sse_exports_and_delete(service, profile):
+async def test_dashboard_auth_sse_exports_and_delete(service, profile, monkeypatch):
+    monkeypatch.setenv("NEBIUS_INPUT_USD_PER_MILLION", "2")
+    monkeypatch.setenv("NEBIUS_OUTPUT_USD_PER_MILLION", "8")
     app = dashboard_app(LocalEdge(service), ScriptedInference, "operator-test-password")
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
         assert (await c.get("/api/config")).status_code == 401
@@ -204,6 +211,30 @@ async def test_dashboard_uart_proxy_uses_the_bounded_audit_timeout(service):
         result = await c.post("/api/uart/audit", json={"mode": "interrupt", "timeout_seconds": 37})
         assert result.status_code == 200
         assert edge.timeout == 42
+
+
+async def test_uart_dependency_reports_configuration_without_claiming_console_readiness(service):
+    class UartEdge(LocalEdge):
+        enabled = False
+
+        async def get(self, path):
+            if path == "/api/v1/uart/status":
+                if self.enabled:
+                    return {"enabled": True, "port": "COM12", "baud": 115200}
+                return {"enabled": False}
+            return await super().get(path)
+
+    edge = UartEdge(service)
+    app = dashboard_app(edge, ScriptedInference, "operator-test-password")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+        await c.post("/api/login", json={"password": "operator-test-password"})
+        for enabled, expected in ((False, "disabled"), (True, "configured")):
+            edge.enabled = enabled
+            config = (await c.get("/api/config")).json()
+            tile = next(item for item in config["dependencies"] if item["id"] == "uart")
+            assert config["uart"]["enabled"] is enabled
+            assert tile["status"] == expected
+            assert ("COM12" in tile["detail"]) is enabled
 
 
 async def test_attack_lab_recommendations_and_hitl_state_machine(service, profile, monkeypatch):

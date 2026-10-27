@@ -26,6 +26,7 @@ test('isolated mock stack: audit, evidence, exports, verified bundle, Attack Lab
   await expect(page.getByTestId('readiness-verdict')).toHaveText('READY · NON-LIVE BACKEND');
   await page.getByRole('button', { name: 'Start audit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Captured printable string' }).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Requested inference model: scripted-demo-v1', { exact: false })).toBeVisible();
   await expect(page.getByText('Checked references, addresses and claim status', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Evidence / }).first().click();
   await expect(page.getByText('Raw bytes withheld by edge data policy', { exact: true })).toBeVisible();
@@ -35,6 +36,7 @@ test('isolated mock stack: audit, evidence, exports, verified bundle, Attack Lab
   const data = JSON.parse(await readFile((await (await download).path())!, 'utf8'));
   expect(data.target_backend).toBe('mock');
   expect(data.inference_backend).toBe('scripted');
+  expect(data.model_id).toBe('scripted-demo-v1');
   expect(data.captures.length).toBe(2);
   expect(data.acquisitions.length).toBe(2);
   expect(data.findings.every((f: { status: string }) => f.status === 'observed')).toBeTruthy();

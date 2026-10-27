@@ -235,8 +235,12 @@ def physical_execution_performed(plan):
 
 
 def attack_report_data(plan):
+    data = plan.model_dump()
+    # Workbench may show approved bytes, but reports remain metadata-only by default.
+    for capture in data["captures"]:
+        capture["evidence"].pop("approved_hex", None)
     return {
-        **plan.model_dump(),
+        **data,
         "physical_execution_performed": physical_execution_performed(plan),
         "report_scope": "Attack Lab plan, HITL decisions, and bounded execution results",
         "safety_boundary": "No firmware writes, rootkit payloads, glitch pulses, or arbitrary commands are supported.",
@@ -250,6 +254,7 @@ def attack_report_markdown(plan):
         "",
         f"- Plan ID: `{plan.plan_id}`",
         f"- Target: `{plan.target_id}`",
+        f"- Source run: `{plan.source_run_id}`" if plan.source_run_id else "- Source run: none",
         f"- Status: **{plan.status}**",
         f"- Execution mode: `{plan.execution_mode}`",
         f"- Physical execution performed: **{'YES' if physical else 'NO'}**",

@@ -23,6 +23,7 @@ flowchart LR
     D -->|Approved derived evidence| G
     G --> I{Inference backend}
     I --> S[Scripted demonstration]
+    I --> Q[Local Ollama; installed model only]
     I --> N[Nebius Token Factory; live gate pending]
     I --> V[Evidence-reference verifier]
     V --> REP[Markdown / JSON reports]
@@ -35,10 +36,12 @@ orchestrator audit. Do not run a competing debugger or a second edge worker agai
 
 ## Independent modes
 
-TARGET_BACKEND is mock, replay or openocd. INFERENCE_BACKEND is scripted or nebius.
+TARGET_BACKEND is mock, replay or openocd. INFERENCE_BACKEND is scripted, ollama or nebius.
 Mock bytes are explicitly synthetic. Replay bytes come from a manifest with original capture time,
 profile, provenance, addresses, SHA256 values and registers. Replay is read-only. OpenOCD attempts
 actual debugger communication and never falls back to fixtures. Scripted analysis is not an LLM.
+Ollama uses a configured installed model over loopback HTTP, with bounded structured requests and no
+automatic download or paid fallback. The deterministic policy gate and evidence verifier apply to every mode.
 
 The offline path has been exercised through real loopback HTTP and a browser. OpenOCD's protocol
 adapter and Nebius's HTTP adapter have fake-server tests. Neither has passed its physical/account gate.
@@ -58,7 +61,7 @@ Initial reads are 256 bytes; per-call maximum is configurable up to 4096. Demo r
 
 Authenticated edge routes:
 - GET /api/v1/target/status and /api/v1/target/profile.
-- POST /api/v1/sessions, /memory/read, /registers/read and /snapshots/capture.
+- POST /api/v1/sessions, DELETE /api/v1/sessions/{session_id}, /memory/read, /registers/read and /snapshots/capture. Logout revokes sessions created by that dashboard login.
 - POST /api/v1/target/halt, /target/resume, /target/step and /memory/write.
 - GET /healthz is unauthenticated process liveness only.
 

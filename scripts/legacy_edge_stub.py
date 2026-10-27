@@ -24,7 +24,10 @@ def create_app():
 
     @app.get("/healthz")
     async def health():
-        return {"status": "ok"}  # no build identity: this is the old shape
+        result = {"status": "ok"}  # no build identity: this is the old shape
+        if token := os.getenv("JTAGENT_TEST_HEALTH_TOKEN"):
+            result["test_token"] = token
+        return result
 
     @app.get("/api/v1/target/profile", dependencies=[Depends(auth)])
     async def profile():

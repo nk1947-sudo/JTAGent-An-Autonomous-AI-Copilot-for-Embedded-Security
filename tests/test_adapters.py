@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from contracts.models import ReadProposal
+from contracts.models import AnalysisResponse, AuditRequest, ReadProposal
 from edge.backends import BackendError, OpenOCDBackend, ReplayBackend, TclRPC
 from fixtures.synthetic import segments
 from orchestrator.inference import InferenceError, NebiusInference
@@ -134,6 +134,29 @@ async def test_openocd_templates_registers_and_lifecycle():
     assert not any(c.startswith("tcl ") for c in commands)
 
 
+async def test_openocd_rechecks_version_after_rpc_disconnect():
+    class ReconnectedRPC:
+        writer = None
+
+        def __init__(self):
+            self.version = "Open On-Chip Debugger 0.12.0"
+            self.commands = []
+
+        async def command(self, command, changing=False):
+            self.commands.append(command)
+            self.writer = object()
+            return self.version if command == "version" else "running"
+
+    rpc = ReconnectedRPC()
+    backend = OpenOCDBackend(rpc, "cpu", "Open On-Chip Debugger 0.12.")
+    assert await backend.status() == "running"
+    rpc.writer = None  # Transport disconnected and a different debugger took the port.
+    rpc.version = "Different Debugger 9.9"
+    with pytest.raises(BackendError, match="openocd_version_mismatch"):
+        await backend.status()
+    assert rpc.commands == ["version", "cpu curstate", "version"]
+
+
 @pytest.mark.parametrize("reply", ["1 999", "nonsense", "0x01 0x02 0x03"])
 async def test_malformed_memory(reply):
     class FakeRPC:
@@ -229,6 +252,78 @@ async def test_provider_visibility_tool_schema_and_usage(nebius_env):
         assert len(provider.latencies) == 2
 
 
+async def test_nebius_planner_checks_exact_model_and_returns_typed_proposal(nebius_env, profile):
+    requests = []
+
+    def handler(req):
+        if req.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "nvidia/test-model"}]})
+        body = json.loads(req.content)
+        requests.append(body)
+        function_name = body["tools"][0]["function"]["name"]
+        arguments = (
+            {
+                "address": profile.regions[0].start,
+                "length": 16,
+                "address_space": profile.regions[0].address_space,
+                "reason": "Inspect selected region",
+            }
+            if function_name == "inspect_memory"
+            else {"findings": [], "followups": []}
+        )
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "name": function_name,
+                                        "arguments": json.dumps(arguments),
+                                    }
+                                }
+                            ]
+                        },
+                    }
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = NebiusInference(client)
+        proposals = await provider.plan(
+            profile,
+            AuditRequest(
+                target_id=profile.target_id, purpose="firmware triage", region_names=[profile.regions[0].name]
+            ),
+        )
+        analysis = await provider.analyze([], [], "firmware triage")
+    assert requests[0]["model"] == "nvidia/test-model"
+    assert requests[0]["max_tokens"] == 2048
+    assert len(proposals) == 1 and isinstance(proposals[0], ReadProposal)
+    assert isinstance(analysis, AnalysisResponse) and analysis.findings == []
+
+
+@pytest.mark.parametrize("payload", [[], {"data": None}, {"data": [None]}])
+async def test_provider_reports_malformed_model_list(nebius_env, payload):
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, json=payload))
+    ) as client:
+        with pytest.raises(InferenceError, match="Malformed Nebius model list"):
+            await NebiusInference(client).preflight()
+
+
+async def test_provider_stream_response_size_is_bounded(nebius_env):
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, content=b"x" * 1_000_001))
+    ) as client:
+        with pytest.raises(InferenceError, match="response exceeds size limit"):
+            await NebiusInference(client).preflight()
+
+
 @pytest.mark.parametrize(
     "status,payload",
     [(401, {}), (200, {"choices": [{"message": {"content": "run shell"}}]}), (200, {"choices": []})],
@@ -238,6 +333,48 @@ async def test_provider_fails_closed(nebius_env, status, payload):
         transport=httpx.MockTransport(lambda r: httpx.Response(status, json=payload))
     ) as client:
         with pytest.raises(InferenceError):
+            await NebiusInference(client).tool("inspect_memory", ReadProposal.model_json_schema(), {})
+
+
+async def test_provider_usage_is_preserved_when_tool_response_is_malformed(nebius_env):
+    payload = {
+        "choices": [{"finish_reason": "length", "message": {"content": "truncated"}}],
+        "usage": {"prompt_tokens": 91, "completion_tokens": 17, "total_tokens": 108},
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, json=payload))
+    ) as client:
+        provider = NebiusInference(client)
+        with pytest.raises(InferenceError, match="malformed"):
+            await provider.tool("inspect_memory", ReadProposal.model_json_schema(), {})
+    assert provider.usage == [{"prompt_tokens": 91, "completion_tokens": 17, "total_tokens": 108}]
+
+
+async def test_provider_rejects_response_from_different_model(nebius_env):
+    payload = {
+        "model": "nvidia/canonicalized-model",
+        "choices": [
+            {
+                "finish_reason": "tool_calls",
+                "message": {
+                    "tool_calls": [
+                        {
+                            "function": {
+                                "name": "inspect_memory",
+                                "arguments": json.dumps(
+                                    {"address": 0x80000000, "length": 16, "reason": "Inspect"}
+                                ),
+                            }
+                        }
+                    ]
+                },
+            }
+        ],
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, json=payload))
+    ) as client:
+        with pytest.raises(InferenceError, match="response model identity"):
             await NebiusInference(client).tool("inspect_memory", ReadProposal.model_json_schema(), {})
 
 
@@ -253,6 +390,47 @@ async def test_provider_bounded_retry(nebius_env):
         with pytest.raises(InferenceError):
             await NebiusInference(client).preflight()
     assert count == 2
+
+
+async def test_provider_total_timeout_is_reported_and_cancellation_propagates(nebius_env):
+    started = asyncio.Event()
+
+    async def slow_handler(request):
+        started.set()
+        await asyncio.sleep(1)
+        return httpx.Response(200, json={})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(slow_handler)) as client:
+        provider = NebiusInference(client)
+        provider.request_timeout_seconds = 0.01
+        with pytest.raises(InferenceError, match="timed out"):
+            await provider.preflight()
+
+        provider.request_timeout_seconds = 30
+        task = asyncio.create_task(provider.preflight())
+        await started.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+
+async def test_provider_rejects_oversized_context_before_request(nebius_env):
+    calls = 0
+
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json={})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = NebiusInference(client)
+        with pytest.raises(InferenceError, match="context budget"):
+            await provider.tool(
+                "inspect_memory",
+                ReadProposal.model_json_schema(),
+                {"untrusted": "x" * 40_000},
+            )
+    assert calls == 0
 
 
 def test_live_config_has_no_fallback(monkeypatch):

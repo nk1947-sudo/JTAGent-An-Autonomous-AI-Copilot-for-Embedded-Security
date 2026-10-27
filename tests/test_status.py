@@ -1,5 +1,6 @@
 """Status v2, build identity and fail-closed readiness. Offline fixtures; no hardware is contacted."""
 
+import asyncio
 import copy
 from datetime import UTC, datetime, timedelta
 
@@ -224,6 +225,22 @@ async def test_current_mock_edge_still_runs_audits(service, profile):
     assert health["build"]["component"] == "orchestrator" and health["build"]["build_id"]
 
 
+async def test_concurrent_audit_requests_claim_the_target_once(service, profile):
+    class SlowStatusEdge(LocalEdge):
+        async def get(self, path):
+            if path == "/api/v1/target/status":
+                await asyncio.sleep(0.02)
+            return await super().get(path)
+
+    client = await signed_in(dashboard_app(SlowStatusEdge(service), ScriptedInference, PASSWORD))
+    responses = await asyncio.gather(
+        client.post("/api/runs", json={**AUDIT, "target_id": profile.target_id}),
+        client.post("/api/runs", json={**AUDIT, "target_id": profile.target_id}),
+    )
+    assert sorted(response.status_code for response in responses) == [200, 409]
+    assert len((await client.get("/api/runs")).json()) == 1
+
+
 async def test_live_step_is_rejected_server_side_when_debugger_is_down(service, profile, monkeypatch):
     monkeypatch.setenv("ATTACK_LAB_LIVE_JTAG", "1")
     raw = live(await service.report())
@@ -257,6 +274,47 @@ async def test_live_step_is_rejected_server_side_when_debugger_is_down(service, 
     assert len(edge.posts) == posts_before  # no session or snapshot was requested
     current = (await client.get(f"/api/attack-lab/plans/{plan['plan_id']}")).json()
     assert current["steps"][2]["status"] == "approved" and not current["captures"]  # retry stays possible
+
+
+async def test_uncertain_live_probe_requires_reconciliation(service, profile, monkeypatch):
+    monkeypatch.setenv("ATTACK_LAB_LIVE_JTAG", "1")
+
+    class UncertainEdge(StatusEdge):
+        async def post(self, path, body, timeout_seconds=12):
+            if path == "/api/v1/snapshots/capture":
+                return {
+                    "success": False,
+                    "outcome_uncertain": True,
+                    "error_code": "restoration_failed_operator_required",
+                }
+            return await super().post(path, body, timeout_seconds)
+
+    client = await signed_in(
+        dashboard_app(UncertainEdge(service, live(await service.report())), ScriptedInference, PASSWORD)
+    )
+    plan = (
+        await client.post(
+            "/api/attack-lab/plans",
+            json={
+                "target_id": profile.target_id,
+                "module_id": "jtag-debug-lock-audit",
+                "objective": "Assess JTAG exposure",
+                "authorization_acknowledged": True,
+            },
+        )
+    ).json()
+    pid = plan["plan_id"]
+    for _ in range(2):
+        plan = (await client.post(f"/api/attack-lab/plans/{pid}/execute-next")).json()
+    await client.post(
+        f"/api/attack-lab/plans/{pid}/steps/{plan['steps'][2]['step_id']}/decision",
+        json={"decision": "approve", "note": "test"},
+    )
+    response = await client.post(f"/api/attack-lab/plans/{pid}/execute-next")
+    assert response.status_code == 200
+    step = response.json()["steps"][2]
+    assert step["status"] == "blocked" and "outcome uncertain" in step["result"]
+    assert "Reconcile the target locally" in step["result"]
 
 
 async def test_workflow_records_acquisition_metadata(service, profile):

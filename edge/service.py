@@ -60,7 +60,7 @@ class EdgeService:
         self.build, self._drift = None, (0.0, None)
         self.max_read, self.arm_snapshots = min(max_read, 4096), arm_snapshots
         self.lock = asyncio.Lock()
-        self.sessions, self.ledger = {}, {}
+        self.sessions, self.ledger, self.revoked_sessions = {}, {}, set()
         self.lease = None
         self.recovery_required = False
 
@@ -77,6 +77,27 @@ class EdgeService:
         session = InspectionSession(**request.model_dump(), expires_at=time.time() + request.ttl_seconds)
         self.sessions[session.session_id] = session
         return session
+
+    async def revoke_session(self, session_id):
+        async with self.lock:
+            if session_id not in self.sessions:
+                return False
+            del self.sessions[session_id]
+            self.revoked_sessions.add(session_id)
+            self.revoked_sessions.intersection_update(key[0] for key in self.ledger)
+            if self.lease and self.lease[0] == session_id:
+                try:
+                    async with asyncio.timeout(3):
+                        state = await self.backend.status()
+                        if state == "halted":
+                            await self.backend.control("resume")
+                        elif state != "running":
+                            raise BackendError("restore_state_uncertain", True)
+                    self.lease = None
+                except (BackendError, TimeoutError, asyncio.CancelledError):
+                    self.recovery_required = True
+                    raise BackendError("revocation_restoration_failed_operator_required", True) from None
+            return True
 
     def validate(self, req, operation):
         session = self.sessions.get(req.session_id)
@@ -105,8 +126,6 @@ class EdgeService:
             raise PolicyError("register_not_permitted")
         if session.used_bytes + length > session.byte_budget:
             raise PolicyError("byte_budget_exhausted")
-        session.used_operations += 1
-        session.used_bytes += length
         return session
 
     def identity(self):
@@ -232,61 +251,100 @@ class EdgeService:
             source_mode=self.backend.mode,
         )
 
-    async def snapshot(self, req, session):
+    async def snapshot(self, req, session, result):
         started = time.perf_counter()
-        original = await self.backend.status()
         generation_before = self.backend.generation
-        halted_here = False
-        result = {}
+        original = None
+        halt_attempted = halted_here = False
+        failure = restoration_error = None
+        restoration = "not_attempted"
         try:
+            original = await self.backend.status()
             if original == "running":
                 if not self.arm_snapshots or not {"halt", "resume"} <= set(session.operations):
                     raise PolicyError("snapshot_requires_locally_armed_halt_resume")
-                halted_here = True  # Includes uncertain halt outcomes; reconcile before any restoration.
+                halt_attempted = True  # An unacknowledged halt still requires a restoration check.
                 await self.backend.control("halt")
+                halted_here = True
             elif original not in ("halted", "captured"):
                 raise BackendError("target_state_unknown")
             result["memory"] = (await self.read(req)).model_dump()
             result["registers"] = (await self.registers(req.registers)).model_dump()
+        except (BackendError, PolicyError, TimeoutError, asyncio.CancelledError) as exc:
+            failure = exc
         finally:
-            if halted_here:
+            if halt_attempted:
                 try:
                     # Local restoration deadline is independent of graph lifetime and session expiry.
                     async with asyncio.timeout(3):
                         current = await self.backend.status()
                         if current == "halted":
+                            halted_here = True
                             await self.backend.control("resume")
                         elif current != "running":
                             raise BackendError("restore_state_uncertain", True)
-                    result["restoration"] = "running"
-                except (BackendError, TimeoutError):
+                    restoration = "running"
+                except (BackendError, TimeoutError, asyncio.CancelledError):
                     self.recovery_required = True
-                    raise BackendError("restoration_failed_operator_required", True) from None
-            else:
-                result["restoration"] = "unchanged"
-        result["initial_state"] = original
-        result["generation_after"] = self.backend.generation
+                    restoration = "failed"
+                    restoration_error = BackendError("restoration_failed_operator_required", True)
+            elif original in ("halted", "captured"):
+                restoration = "unchanged"
+
         try:
             final = await self.backend.status()
-        except BackendError:
-            final = None  # Unknown, not assumed: recorded as such in the acquisition record.
+        except (BackendError, TimeoutError, asyncio.CancelledError) as exc:
+            final = None
+            if failure is None:
+                failure = exc
+            if original in ("halted", "captured"):
+                restoration = "unknown"
+        if halt_attempted and restoration == "running" and final != "running":
+            restoration = "failed"
+            restoration_error = BackendError("restoration_failed_operator_required", True)
+            self.recovery_required = True
+        if failure is None and restoration_error is not None:
+            failure = restoration_error
+        uncertain = (
+            bool(restoration_error)
+            or (original is not None and final is None)
+            or isinstance(failure, (TimeoutError, asyncio.CancelledError))
+            or bool(getattr(failure, "uncertain", False))
+        )
+        if uncertain:
+            self.recovery_required = True
+        error_code = (
+            "operation_cancelled"
+            if isinstance(failure, asyncio.CancelledError)
+            else "edge_timeout"
+            if isinstance(failure, TimeoutError)
+            else getattr(failure, "code", str(failure) if failure else None)
+        )
+        result["initial_state"] = original
+        result["generation_after"] = self.backend.generation
+        result["restoration"] = restoration
         result["acquisition"] = AcquisitionRecord(
-            evidence_id=result["memory"]["evidence_id"],
-            register_evidence_id=result["registers"]["evidence_id"],
+            evidence_id=result.get("memory", {}).get("evidence_id"),
+            register_evidence_id=result.get("registers", {}).get("evidence_id"),
             method=ACQUISITION_METHOD.get(self.backend.mode, self.backend.mode),
             backend=self.backend.mode,
             debugger_version=getattr(self.backend, "version", None),
             halted_by_edge=halted_here,
             initial_state=original,
-            capture_state=result["memory"]["target_state"],
+            capture_state=result.get("memory", {}).get("target_state"),
             final_state=final,
-            restoration=result["restoration"],
+            restoration=restoration,
+            error_code=error_code,
+            restoration_error_code=restoration_error.code if restoration_error else None,
+            outcome_uncertain=uncertain,
             recovery_required=self.recovery_required,
             generation_before=generation_before,
             generation_after=self.backend.generation,
             edge_build_id=self.identity().build_id,
             duration_ms=(time.perf_counter() - started) * 1000,
         ).model_dump()
+        if failure is not None:
+            raise failure
         return result
 
     async def recover_lease(self, owner, generation, ttl):
@@ -304,6 +362,18 @@ class EdgeService:
         signature = hashlib.sha256((operation + req.model_dump_json()).encode()).hexdigest()
         key = (req.session_id, req.request_id)
         async with self.lock:
+            if req.session_id in self.revoked_sessions:
+                raise PolicyError("session_revoked")
+            cutoff = time.time()
+            expired = [
+                entry_key
+                for entry_key, (_, result) in self.ledger.items()
+                if not result.outcome_uncertain
+                and (entry_key[0] not in self.sessions or self.sessions[entry_key[0]].expires_at <= cutoff)
+            ]
+            for entry_key in expired:
+                del self.ledger[entry_key]
+            self.revoked_sessions.intersection_update(key[0] for key in self.ledger)
             if key in self.ledger:
                 previous_signature, result = self.ledger[key]
                 if previous_signature != signature:
@@ -312,10 +382,13 @@ class EdgeService:
             session = self.validate(req, operation)
             if len(self.ledger) >= 1024:
                 raise PolicyError("operation_ledger_full_restart_required")
+            session.used_operations += 1
+            session.used_bytes += getattr(req, "length", 0)
             try:
                 async with asyncio.timeout(8):
                     if operation == "snapshot":
-                        data = await self.snapshot(req, session)
+                        data = {}
+                        await self.snapshot(req, session, data)
                     elif operation == "read":
                         data = (await self.read(req)).model_dump()
                     elif operation == "registers":
@@ -363,8 +436,16 @@ class EdgeService:
                 uncertain = getattr(
                     exc, "uncertain", operation in ("halt", "resume", "step", "write", "snapshot")
                 )
+                if operation == "snapshot" and data.get("acquisition"):
+                    uncertain = uncertain or data["acquisition"]["outcome_uncertain"]
                 if uncertain:
                     self.recovery_required = True
+                if operation == "snapshot" and data.get("acquisition"):
+                    data["acquisition"].update(
+                        error_code=getattr(exc, "code", "edge_timeout"),
+                        outcome_uncertain=uncertain,
+                        recovery_required=self.recovery_required,
+                    )
                 result = ToolResult(
                     success=False,
                     request_id=req.request_id,
@@ -372,6 +453,30 @@ class EdgeService:
                     error_code=getattr(exc, "code", "edge_timeout"),
                     outcome_uncertain=uncertain,
                     provenance=self.backend.mode,
+                    data=data if operation == "snapshot" else None,
                 )
+            except asyncio.CancelledError:
+                uncertain = operation in ("snapshot", "halt", "resume", "step") or (
+                    operation == "write" and not req.dry_run
+                )
+                if uncertain:
+                    self.recovery_required = True
+                if operation == "snapshot" and data.get("acquisition"):
+                    data["acquisition"].update(
+                        error_code="operation_cancelled",
+                        outcome_uncertain=uncertain,
+                        recovery_required=self.recovery_required,
+                    )
+                result = ToolResult(
+                    success=False,
+                    request_id=req.request_id,
+                    duration_ms=(time.perf_counter() - started) * 1000,
+                    error_code="operation_cancelled",
+                    outcome_uncertain=uncertain,
+                    provenance=self.backend.mode,
+                    data=data if operation == "snapshot" else None,
+                )
+                self.ledger[key] = (signature, result)
+                raise
             self.ledger[key] = (signature, result)
             return result

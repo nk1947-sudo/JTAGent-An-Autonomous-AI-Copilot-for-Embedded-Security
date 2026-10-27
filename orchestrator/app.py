@@ -100,6 +100,9 @@ class EdgeClient:
     async def get(self, path):
         return await self.request("GET", path)
 
+    async def delete(self, path):
+        return await self.request("DELETE", path)
+
 
 class Login(BaseModel):
     password: str = Field(max_length=256)
@@ -112,6 +115,11 @@ def create_app(edge=None, inference_factory=None, password=None):
     if not password or len(password) < 12:
         raise ValueError("DASHBOARD_PASSWORD requires at least 12 characters")
     runs, tasks, cancellations, login_sessions, attack_plans = {}, {}, {}, {}, {}
+    edge_sessions = {}
+    run_owners = {}
+    session_lock = asyncio.Lock()
+    target_start_lock = asyncio.Lock()
+    active_plan_uses = {}
     recommendation_cache = {}
     created = {}
     failures = []
@@ -119,6 +127,40 @@ def create_app(edge=None, inference_factory=None, password=None):
     build = load_build("orchestrator")
     export_root = Path(os.getenv("EXPORT_DIR") or default_export_root(ROOT))
     drift_cache = [0.0, False]
+
+    def require_hosted_live_approval(inference, *target_backends):
+        if (
+            getattr(inference, "mode", None) == "nebius"
+            and "openocd" in target_backends
+            and os.getenv("NEBIUS_LIVE_EVIDENCE_ENABLED") != "1"
+        ):
+            raise HTTPException(
+                403,
+                "Nebius inference with live-target evidence requires explicit NEBIUS_LIVE_EVIDENCE_ENABLED=1 approval",
+            )
+
+    class OwnedEdge:
+        def __init__(self, token):
+            self.token = token
+
+        async def post(self, path, body, timeout_seconds=12):
+            if path == "/api/v1/sessions":
+                async with session_lock:
+                    if login_sessions.get(self.token, 0) < time.time():
+                        raise HTTPException(401, "Operator session ended")
+                    result = await edge.post(path, body, timeout_seconds)
+                    edge_sessions.setdefault(self.token, {})[result["session_id"]] = time.time() + min(
+                        body["ttl_seconds"], 120
+                    )
+                    return result
+            if login_sessions.get(self.token, 0) < time.time():
+                raise HTTPException(401, "Operator session ended")
+            return await edge.post(path, body, timeout_seconds)
+
+        async def get(self, path):
+            if login_sessions.get(self.token, 0) < time.time():
+                raise HTTPException(401, "Operator session ended")
+            return await edge.get(path)
 
     def own_drift():
         if time.monotonic() - drift_cache[0] > 5:
@@ -154,6 +196,7 @@ def create_app(edge=None, inference_factory=None, password=None):
                     tasks.pop(rid, None)
                     cancellations.pop(rid, None)
                     created.pop(rid, None)
+                    run_owners.pop(rid, None)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -199,7 +242,10 @@ def create_app(edge=None, inference_factory=None, password=None):
     @app.get("/healthz")
     async def health():
         # Liveness and loaded-code identity only; readiness is /api/readiness.
-        return {"status": "ok", "build": build.model_dump()}
+        result = {"status": "ok", "build": build.model_dump()}
+        if token := os.getenv("JTAGENT_TEST_HEALTH_TOKEN"):
+            result["test_token"] = token
+        return result
 
     @app.post("/api/login")
     async def login(body: Login, response: Response, request: Request):
@@ -227,9 +273,36 @@ def create_app(edge=None, inference_factory=None, password=None):
 
     @app.post("/api/logout", dependencies=[Depends(auth)])
     async def logout(request: Request, response: Response):
-        login_sessions.pop(request.cookies.get("operator", ""), None)
+        token = request.cookies.get("operator", "")
+        async with session_lock:
+            login_sessions.pop(token, None)
+            sessions = [
+                session_id
+                for session_id, expires_at in edge_sessions.pop(token, {}).items()
+                if expires_at > time.time()
+            ]
+        owned_tasks = [tasks[rid] for rid, owner in run_owners.items() if owner == token and rid in tasks]
+        for task in owned_tasks:
+            task.cancel()
+        await asyncio.gather(*owned_tasks, return_exceptions=True)
+
+        async def revoke(session_id):
+            try:
+                await edge.delete(f"/api/v1/sessions/{session_id}")
+                return True
+            except Exception:  # noqa: BLE001 -- local logout still takes effect; report failed edge revocation
+                return False
+
+        try:
+            revoked = await asyncio.wait_for(
+                asyncio.gather(*(revoke(session_id) for session_id in sessions)), timeout=5
+            )
+        except TimeoutError:
+            revoked = [False]
         response.delete_cookie("operator")
-        return {"authenticated": False}
+        if not all(revoked):
+            response.status_code = 503
+        return {"authenticated": False, "edge_sessions_revoked": all(revoked)}
 
     @app.get("/api/readiness", dependencies=[Depends(auth)], response_model=Readiness)
     async def readiness_route():
@@ -320,7 +393,7 @@ def create_app(edge=None, inference_factory=None, password=None):
                 tile(
                     "uart",
                     "UART",
-                    "ready" if uart.get("enabled") else "disabled",
+                    "configured" if uart.get("enabled") else "disabled",
                     f"{uart.get('port', 'not configured')} · {uart.get('baud', '-')}",
                 ),
                 tile(
@@ -332,8 +405,12 @@ def create_app(edge=None, inference_factory=None, password=None):
                 ),
             ],
             "pricing": {
-                "input_usd_per_million": optional_rate("NEBIUS_INPUT_USD_PER_MILLION"),
-                "output_usd_per_million": optional_rate("NEBIUS_OUTPUT_USD_PER_MILLION"),
+                "input_usd_per_million": optional_rate("NEBIUS_INPUT_USD_PER_MILLION")
+                if inference.mode == "nebius"
+                else None,
+                "output_usd_per_million": optional_rate("NEBIUS_OUTPUT_USD_PER_MILLION")
+                if inference.mode == "nebius"
+                else None,
             },
             "attack_lab": {"live_jtag_enabled": os.getenv("ATTACK_LAB_LIVE_JTAG") == "1"},
         }
@@ -350,7 +427,11 @@ def create_app(edge=None, inference_factory=None, password=None):
             raise HTTPException(503, "UART audit unavailable or failed") from None
 
     @app.post("/api/runs", dependencies=[Depends(auth)], response_model=RunState)
-    async def start(body: AuditRequest):
+    async def start(body: AuditRequest, request: Request):
+        async with target_start_lock:
+            return await start_locked(body, request.cookies["operator"])
+
+    async def start_locked(body: AuditRequest, token: str):
         if any(r.status in ("running", "queued") for r in runs.values()):
             raise HTTPException(409, "One audit at a time owns this target")
         if len(runs) >= 20:
@@ -361,6 +442,7 @@ def create_app(edge=None, inference_factory=None, password=None):
                 raise blocked(readiness, live=False)
             profile = TargetProfile.model_validate(await edge.get("/api/v1/target/profile"))
             inference = inference_factory()
+            require_hosted_live_approval(inference, readiness.target_backend)
         except HTTPException:
             raise
         except Exception:  # noqa: BLE001 -- sanitize errors at the public boundary
@@ -368,6 +450,8 @@ def create_app(edge=None, inference_factory=None, password=None):
         allowed = {r.name for r in profile.regions if r.approved}
         if body.target_id != profile.target_id or not set(body.region_names) <= allowed:
             raise HTTPException(403, "Scope not allowed")
+        if login_sessions.get(token, 0) < time.time():
+            raise HTTPException(401, "Operator session ended")
         run = RunState(
             target_backend=readiness.target_backend,
             inference_backend=inference.mode,
@@ -378,7 +462,8 @@ def create_app(edge=None, inference_factory=None, password=None):
         runs[run.run_id] = run
         created[run.run_id] = time.time()
         cancellations[run.run_id] = asyncio.Event()
-        workflow = Workflow(run, edge, inference, cancellations[run.run_id], build.build_id)
+        run_owners[run.run_id] = token
+        workflow = Workflow(run, OwnedEdge(token), inference, cancellations[run.run_id], build.build_id)
         tasks[run.run_id] = asyncio.create_task(workflow.execute())
         return run
 
@@ -429,6 +514,7 @@ def create_app(edge=None, inference_factory=None, password=None):
         created.pop(rid, None)
         tasks.pop(rid, None)
         cancellations.pop(rid, None)
+        run_owners.pop(rid, None)
         return {"deleted": True}
 
     @app.get("/api/runs/{rid}/events", dependencies=[Depends(auth)])
@@ -477,16 +563,39 @@ def create_app(edge=None, inference_factory=None, password=None):
         if body.target_id != profile.target_id:
             raise HTTPException(403, "Target not authorized")
         source_run = get_run(body.run_id) if body.run_id else None
-        findings = source_run.findings if source_run else []
-        evidence_ids = [capture.evidence_id for capture in source_run.captures] if source_run else []
         uart = await edge.get("/api/v1/uart/status")
-        cache_key = (body.target_id, body.run_id, body.objective.strip().lower())
+        readiness = await current_readiness()
+        try:
+            inference = inference_factory()
+            require_hosted_live_approval(
+                inference,
+                readiness.target_backend,
+                source_run.target_backend if source_run else None,
+            )
+        except HTTPException:
+            raise
+        except Exception:  # noqa: BLE001 -- never silently substitute model recommendations
+            raise HTTPException(503, "Attack recommendation model unavailable; no fallback") from None
+        captures = tuple(source_run.captures) if source_run else ()
+        findings = tuple(source_run.findings) if source_run else ()
+        evidence_ids = tuple(capture.evidence_id for capture in captures)
+        cache_key = (
+            body.target_id,
+            body.run_id,
+            body.objective.strip().lower(),
+            getattr(inference, "mode", None),
+            getattr(inference, "model_id", None),
+            tuple((capture.evidence_id, capture.content_hash) for capture in captures),
+            tuple(finding.model_dump_json() for finding in findings),
+        )
         if cache_key in recommendation_cache:
             return recommendation_cache[cache_key]
         try:
             selected = await asyncio.wait_for(
-                inference_factory().recommend_attacks(profile, findings, body.objective), timeout=65
+                inference.recommend_attacks(profile, list(findings), body.objective), timeout=65
             )
+        except HTTPException:
+            raise
         except TimeoutError:
             raise HTTPException(
                 504, "Attack recommendation timed out after 65 seconds; no automatic paid retry"
@@ -497,7 +606,7 @@ def create_app(edge=None, inference_factory=None, password=None):
             recommendation(
                 module_id,
                 selected.rationale,
-                evidence_ids,
+                list(evidence_ids),
                 profile,
                 bool(uart.get("enabled")),
                 os.getenv("ATTACK_LAB_LIVE_JTAG") == "1",
@@ -515,12 +624,12 @@ def create_app(edge=None, inference_factory=None, password=None):
     async def create_attack_plan(body: AttackPlanRequest):
         if not body.authorization_acknowledged:
             raise HTTPException(422, "Authorization acknowledgement required")
-        if len(attack_plans) >= 20:
-            raise HTTPException(429, "Attack plan capacity reached")
         profile = TargetProfile.model_validate(await edge.get("/api/v1/target/profile"))
         if body.target_id != profile.target_id:
             raise HTTPException(403, "Target not authorized")
         source_run = get_run(body.run_id) if body.run_id else None
+        if source_run and source_run.profile.target_id != body.target_id:
+            raise HTTPException(403, "Source run target not authorized")
         data = recommendation(
             body.module_id,
             "Operator selected a catalogued module.",
@@ -530,6 +639,13 @@ def create_app(edge=None, inference_factory=None, password=None):
             os.getenv("ATTACK_LAB_LIVE_JTAG") == "1",
         )
         plan = build_plan(body, data)
+        if source_run:
+            plan.source_run_id = source_run.run_id
+            plan.captures = [capture.model_copy(deep=True) for capture in source_run.captures]
+            plan.registers = [snapshot.model_copy(deep=True) for snapshot in source_run.registers]
+            plan.acquisitions = [record.model_copy(deep=True) for record in source_run.acquisitions]
+        if len(attack_plans) >= 20:
+            raise HTTPException(429, "Attack plan capacity reached")
         attack_plans[plan.plan_id] = plan
         return plan
 
@@ -541,6 +657,19 @@ def create_app(edge=None, inference_factory=None, password=None):
     @app.get("/api/attack-lab/plans/{plan_id}", dependencies=[Depends(auth)], response_model=AttackPlan)
     async def get_attack_plan_route(plan_id: str):
         return get_attack_plan(plan_id)
+
+    @app.delete("/api/attack-lab/plans/{plan_id}", dependencies=[Depends(auth)])
+    async def delete_attack_plan(plan_id: str):
+        if active_plan_uses.get(plan_id):
+            raise HTTPException(409, "Plan is in use")
+        async with target_start_lock:
+            if active_plan_uses.get(plan_id):
+                raise HTTPException(409, "Plan is in use")
+            plan = get_attack_plan(plan_id)
+            if plan.status not in ("completed", "simulation_completed", "blocked", "aborted"):
+                raise HTTPException(409, "Complete or abort the plan before deletion")
+            attack_plans.pop(plan_id)
+            return {"deleted": True}
 
     @app.post(
         "/api/attack-lab/plans/{plan_id}/steps/{step_id}/decision",
@@ -571,7 +700,17 @@ def create_app(edge=None, inference_factory=None, password=None):
         dependencies=[Depends(auth)],
         response_model=AttackPlan,
     )
-    async def execute_attack_step(plan_id: str):
+    async def execute_attack_step(plan_id: str, request: Request):
+        active_plan_uses[plan_id] = active_plan_uses.get(plan_id, 0) + 1
+        try:
+            async with target_start_lock:
+                return await execute_attack_step_locked(plan_id, OwnedEdge(request.cookies["operator"]))
+        finally:
+            active_plan_uses[plan_id] -= 1
+            if not active_plan_uses[plan_id]:
+                active_plan_uses.pop(plan_id)
+
+    async def execute_attack_step_locked(plan_id: str, operation_edge):
         plan = get_attack_plan(plan_id)
         if plan.status in ("paused", "completed", "simulation_completed", "blocked", "aborted"):
             raise HTTPException(409, "Plan cannot execute in its current state")
@@ -581,6 +720,8 @@ def create_app(edge=None, inference_factory=None, password=None):
         if not step:
             raise HTTPException(409, "No approved step is ready")
         if step.operation == "jtag_snapshot_probe" and os.getenv("ATTACK_LAB_LIVE_JTAG") == "1":
+            if any(r.status in ("running", "queued") for r in runs.values()):
+                raise HTTPException(409, "An audit already owns this target")
             # Re-derived from a fresh edge status under the same rules as an audit; the browser's
             # disabled button is a convenience, not the policy boundary.
             readiness = await current_readiness()
@@ -594,8 +735,8 @@ def create_app(edge=None, inference_factory=None, password=None):
                 step.status = "blocked"
                 step.result = "Real JTAG execution is disabled. Set ATTACK_LAB_LIVE_JTAG=1 and restart after reviewing the recovery path."
             else:
-                profile = TargetProfile.model_validate(await edge.get("/api/v1/target/profile"))
-                target_status = await edge.get("/api/v1/target/status")
+                profile = TargetProfile.model_validate(await operation_edge.get("/api/v1/target/profile"))
+                target_status = await operation_edge.get("/api/v1/target/status")
                 region = next((candidate for candidate in profile.regions if candidate.approved), None)
                 if target_status.get("target_backend") != "openocd":
                     step.status = "blocked"
@@ -608,7 +749,7 @@ def create_app(edge=None, inference_factory=None, password=None):
                     step.result = "The live profile does not authorize snapshot plus halt/resume restoration."
                 else:
                     length = min(64, region.end - region.start)
-                    session = await edge.post(
+                    session = await operation_edge.post(
                         "/api/v1/sessions",
                         {
                             "target_id": profile.target_id,
@@ -619,44 +760,58 @@ def create_app(edge=None, inference_factory=None, password=None):
                             "ttl_seconds": 10,
                         },
                     )
-                    result = await edge.post(
-                        "/api/v1/snapshots/capture",
-                        {
-                            "target_id": profile.target_id,
-                            "session_id": session["session_id"],
-                            "address": region.start,
-                            "length": length,
-                            "address_space": region.address_space,
-                        },
-                        timeout_seconds=12,
-                    )
-                    if not result.get("success"):
+                    try:
+                        result = await operation_edge.post(
+                            "/api/v1/snapshots/capture",
+                            {
+                                "target_id": profile.target_id,
+                                "session_id": session["session_id"],
+                                "address": region.start,
+                                "length": length,
+                                "address_space": region.address_space,
+                            },
+                            timeout_seconds=12,
+                        )
+                    except Exception:  # noqa: BLE001 -- a lost acknowledgment may follow a real halt
                         step.status = "blocked"
                         step.result = (
-                            f"Physical JTAG probe failed safely: {result.get('error_code', 'unknown error')}"
+                            "Physical JTAG probe outcome unknown. Check the edge recovery state and target "
+                            "execution state locally before starting another operation."
                         )
                     else:
-                        after = await edge.get("/api/v1/target/status")
-                        memory = result["data"]["memory"]
-                        capture = MemoryReadResult.model_validate(memory)
-                        register_capture = RegisterSnapshot.model_validate(result["data"]["registers"])
-                        plan.captures.append(capture)
-                        plan.registers.append(register_capture)
-                        if result["data"].get("acquisition"):
+                        data = result.get("data") or {}
+                        memory = data.get("memory")
+                        if memory:
+                            plan.captures.append(MemoryReadResult.model_validate(memory))
+                            evidence_id = memory["evidence_id"]
+                            if evidence_id not in plan.evidence_ids:
+                                plan.evidence_ids.append(evidence_id)
+                        if data.get("registers"):
+                            plan.registers.append(RegisterSnapshot.model_validate(data["registers"]))
+                        if data.get("acquisition"):
                             plan.acquisitions.append(
                                 AcquisitionRecord.model_validate(
-                                    {**result["data"]["acquisition"], "orchestrator_build_id": build.build_id}
+                                    {**data["acquisition"], "orchestrator_build_id": build.build_id}
                                 )
                             )
-                        evidence_id = memory["evidence_id"]
-                        if evidence_id not in plan.evidence_ids:
-                            plan.evidence_ids.append(evidence_id)
-                        step.status = "completed"
-                        step.result = (
-                            f"REAL {target_status['target_backend'].upper()} JTAG probe: read {memory['returned_length']} bytes "
-                            f"at 0x{memory['base_address']:08x}; captured registers; restoration={result['data']['restoration']}; "
-                            f"target state after probe={after['state']}; evidence={evidence_id[:8]}."
-                        )
+                        if not result.get("success"):
+                            step.status = "blocked"
+                            if result.get("outcome_uncertain"):
+                                step.result = (
+                                    "Physical JTAG probe outcome uncertain: "
+                                    f"{result.get('error_code', 'unknown error')}. Reconcile the target locally."
+                                )
+                            else:
+                                step.result = f"Physical JTAG probe did not complete: {result.get('error_code', 'unknown error')}"
+                            if memory or data.get("registers"):
+                                step.result += " Partial evidence was retained for review."
+                        else:
+                            step.status = "completed"
+                            step.result = (
+                                f"REAL {target_status['target_backend'].upper()} JTAG probe: read {memory['returned_length']} bytes "
+                                f"at 0x{memory['base_address']:08x}; captured registers; restoration={data['restoration']}; "
+                                f"target state after probe={data.get('acquisition', {}).get('final_state') or 'unknown'}; evidence={evidence_id[:8]}."
+                            )
         elif step.operation in ("evidence_review", "register_review"):
             step.status = "completed"
             step.result = (
@@ -825,16 +980,26 @@ def create_app(edge=None, inference_factory=None, password=None):
         "/api/attack-lab/plans/{plan_id}/bundle", dependencies=[Depends(auth)], response_model=BundleResult
     )
     async def attack_bundle(plan_id: str, body: BundleRequest):
-        plan = get_attack_plan(plan_id)
-        inference = {"recorded": False, "note": "Attack Lab plans do not record the recommending backend"}
-        return await write_bundle(
-            "attack_plan",
-            plan,
-            attack_report_data(plan),
-            attack_report_markdown(plan),
-            inference,
-            body.include_raw,
-        )
+        active_plan_uses[plan_id] = active_plan_uses.get(plan_id, 0) + 1
+        try:
+            async with target_start_lock:
+                plan = get_attack_plan(plan_id)
+                inference = {
+                    "recorded": False,
+                    "note": "Attack Lab plans do not record the recommending backend",
+                }
+                return await write_bundle(
+                    "attack_plan",
+                    plan,
+                    attack_report_data(plan),
+                    attack_report_markdown(plan),
+                    inference,
+                    body.include_raw,
+                )
+        finally:
+            active_plan_uses[plan_id] -= 1
+            if not active_plan_uses[plan_id]:
+                active_plan_uses.pop(plan_id)
 
     @app.get("/api/exports", dependencies=[Depends(auth)], response_model=list[BundleSummary])
     async def exports():
@@ -864,9 +1029,18 @@ def create_app(edge=None, inference_factory=None, password=None):
             raise HTTPException(409, "The selected plan has no captured JTAG evidence")
         profile = TargetProfile.model_validate(await edge.get("/api/v1/target/profile"))
         try:
-            return await asyncio.wait_for(
-                inference_factory().debugger_assist(profile, plan, body.objective), timeout=65
+            readiness = await current_readiness()
+            inference = inference_factory()
+            require_hosted_live_approval(
+                inference,
+                readiness.target_backend,
+                *(capture.source_mode for capture in plan.captures),
             )
+            return await asyncio.wait_for(
+                inference.debugger_assist(profile, plan, body.objective), timeout=65
+            )
+        except HTTPException:
+            raise
         except TimeoutError:
             raise HTTPException(504, "Debugger agent timed out after 65 seconds") from None
         except Exception:  # noqa: BLE001 -- sanitize model/provider failures

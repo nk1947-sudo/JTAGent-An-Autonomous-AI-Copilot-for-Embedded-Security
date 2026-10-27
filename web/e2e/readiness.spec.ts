@@ -10,6 +10,10 @@ test('current edge: every status layer is shown separately with the loaded build
   await expect(page.getByTestId('layer-snapshots-armed')).toContainText('yes');
   await expect(page.getByTestId('layer-recovery-required')).toContainText('no');
   await expect(page.getByTestId('layer-status-schema')).toContainText('v2');
+  const first = await page.getByTestId('layer-application').boundingBox();
+  const second = await page.getByTestId('layer-debugger-reachable').boundingBox();
+  expect(first && second && second.x >= first.x + first.width).toBe(true);
+  await expect(page.getByTestId('layer-application').locator('code')).toHaveCSS('display', 'block');
   // The build shown is what the processes report about themselves, not a recomputation.
   const edge = (await (await page.request.get(stack.edge + '/healthz')).json()).build;
   const orchestrator = (await (await page.request.get('/healthz')).json()).build;

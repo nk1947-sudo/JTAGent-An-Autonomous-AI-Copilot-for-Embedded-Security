@@ -7,21 +7,19 @@ const advice = (actions: unknown[], extra: object = {}) => ({
 });
 const action = (operation: string, extra: object = {}) => ({ operation, rationale: 'because', address: null, length: null, count: null, requires_approval: true, ...extra });
 
-/**
- * Backend-generated evidence: a real Attack Lab plan (created through the API) whose capture and
- * register data come from a real mock audit, returned by the plan list the Workbench reads.
- */
+/** Backend-generated mock run evidence linked to a real Attack Lab plan. */
 async function openWorkbenchWithEvidence(page: Page) {
   const run = await finishedRun(page);
   const config = await (await page.request.get('/api/config')).json();
   const plan = await (await page.request.post('/api/attack-lab/plans', {
-    data: { target_id: config.profile.target_id, module_id: 'jtag-debug-lock-audit', objective: 'Assess JTAG exposure', authorization_acknowledged: true },
+    data: { target_id: config.profile.target_id, module_id: 'jtag-debug-lock-audit', objective: 'Assess JTAG exposure', run_id: run.run_id, authorization_acknowledged: true },
   })).json();
-  const withEvidence = { ...plan, captures: run.captures, registers: run.registers, acquisitions: run.acquisitions, evidence_ids: run.captures.map((c: { evidence_id: string }) => c.evidence_id) };
-  await page.route('**/api/attack-lab/plans', route => route.request().method() === 'GET' ? route.fulfill({ json: [withEvidence] }) : route.continue());
+  expect(plan.source_run_id).toBe(run.run_id);
+  expect(plan.captures).toEqual(run.captures);
+  expect(plan.registers).toEqual(run.registers);
   await page.getByRole('button', { name: 'AI Workbench', exact: true }).click();
   await expect(page.getByText('EVIDENCE LINKED')).toBeVisible();
-  return withEvidence;
+  return plan;
 }
 const ask = (page: Page) => page.getByRole('button', { name: 'Ask debugger agent' }).click();
 
@@ -30,7 +28,15 @@ test.beforeEach(async ({ page }) => { await signIn(page); });
 test('addressless and zero-valued actions render; null fields show nothing meaningless', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
-  await openWorkbenchWithEvidence(page);
+  const plan = await openWorkbenchWithEvidence(page);
+  const [capture, dataCapture] = plan.captures;
+  await expect(page.locator('.capture-meta')).toContainText(`0x${capture.base_address.toString(16).padStart(8, '0')}`);
+  await expect(page.locator('.instruction-table')).toContainText(capture.evidence.instructions[0].mnemonic);
+  await expect(page.locator('.workbench-registers')).toContainText('pc');
+  await page.getByRole('combobox', { name: 'Capture', exact: true }).selectOption(dataCapture.evidence_id);
+  await expect(page.locator('.capture-meta')).toContainText(`0x${dataCapture.base_address.toString(16).padStart(8, '0')}`);
+  await expect(page.getByText(dataCapture.evidence.strings[0].text, { exact: true })).toBeVisible();
+  await expect(page.locator('.strings .string').first()).toContainText(`0x${dataCapture.evidence.strings[0].address.toString(16).padStart(8, '0')}`);
   await page.route('**/api/debugger/advice', route => route.fulfill({ json: advice([
     action('inspect_registers'),                                  // address, length, count all null
     action('disassemble', { address: 0, length: 4 }),             // a valid zero address must be kept

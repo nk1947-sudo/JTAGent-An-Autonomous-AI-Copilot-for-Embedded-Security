@@ -11,6 +11,10 @@ See [architecture.md](architecture.md) for the full system design, [PRD.md](PRD.
 for product scope and requirements, and [docs/milestones.md](docs/milestones.md) for
 delivery status.
 
+Current delivery scope is the Nebius × NVIDIA Global AI Hackathon. Nebius hosted results are
+documented separately from repeatable scripted/mock/replay checks and historical hardware runs;
+local Qwen evaluation is deferred and is not a readiness gate.
+
 ## How it works
 
 1. **Edge service** (`edge/`) — a FastAPI bridge that talks to the physical target
@@ -59,6 +63,8 @@ used. In-memory state, operator exports and provider retention are separate conc
   mode — everything else runs against the mock or replay backend
 
 ## Quickstart (mock demo)
+
+For a connected BeagleBone Black and C232HM adapter, use the [native hardware run guide](docs/hardware-run.md). It starts the agent and dashboard locally without Docker, with explicit snapshot arming and a model-backed inference option.
 
 The fastest way to see the full loop end-to-end, with no hardware and no external
 API calls, is the bundled demo script. It builds the dashboard, starts both
@@ -157,16 +163,18 @@ before starting it. Use the same hostname in the browser so origin checks match.
 | --- | --- |
 | `scripted` (default) | Deterministic, offline rule-based planner/analyzer — no external calls, used for demos and tests |
 | `nebius` | NVIDIA model inference through Nebius Token Factory; this does not imply compute deployment (`NEBIUS_BASE_URL`, `NEBIUS_MODEL`, `NEBIUS_API_KEY`, `NEBIUS_VERIFIED_CONTEXT_TOKENS`, `NEBIUS_MAX_OUTPUT_TOKENS`) |
+| `ollama` | Preserved optional local schema-constrained inference using an installed model. Loopback only, bounded, and no automatic download or paid fallback. Local Qwen evaluation is deferred and outside the Nebius × NVIDIA hackathon milestone. |
 
 Other notable environment variables: `MAX_READ_BYTES`, `ARM_SNAPSHOTS`,
 `REDACT_VALUES`, `PUBLIC_ORIGIN`, `COOKIE_SECURE`. Set `UART_AUDIT_ENABLED=1`,
 `UART_PORT`, and optional local `UART_AUDIT_USERNAME`/`UART_AUDIT_PASSWORD` to expose
 the dashboard's bounded UART assessment. LangSmith/LangChain tracing is
-force-disabled by the orchestrator entrypoint. Live raw bytes are withheld at the edge;
-approved derived evidence is sent to the provider only when Nebius mode is explicitly selected.
+force-disabled by the orchestrator entrypoint. Live raw bytes are withheld at the edge. Nebius mode sends compact derived evidence; use it with live-target evidence only after separate authorization and provider-retention review. Ollama receives derived evidence locally.
 Set optional `NEBIUS_INPUT_USD_PER_MILLION` and `NEBIUS_OUTPUT_USD_PER_MILLION`
 display rates to show a run-cost estimate from provider token usage. These rates are
 operator-supplied display metadata, not billing records.
+Nebius is denied for live-target data unless `NEBIUS_LIVE_EVIDENCE_ENABLED=1` is explicitly set
+after separate authorization and provider-retention review; keep it unset for the demo.
 
 ## Testing
 
@@ -177,17 +185,24 @@ uv run ruff format --check .
 ```
 
 Covers edge policy enforcement, evidence sanitization, workflow finding
-verification, and both inference adapters (scripted and a faked Nebius provider).
+verification, and the scripted, local Ollama (faked transport), and Nebius inference adapters.
 
-Browser smoke tests for the dashboard live in `web/demo.spec.ts` and run via
-`npm test` (Playwright) from `web/`. First run `npm ci`, `npm run build` and
-`npx playwright install chromium` there. Keep ports 8000/8001 free for the smoke test.
+Browser tests run against an isolated mock/scripted stack on separate loopback ports:
 
-Regenerate shared types after contract changes:
+```powershell
+npm --prefix web ci
+npm --prefix web test
+```
+
+The Playwright setup builds the dashboard and starts its own services. The tests do not
+need ports 8000/8001 free and do not inspect the connected hardware session.
+
+Regenerate shared types after contract changes, then check for drift:
 
 ```powershell
 uv run python scripts/generate_contracts.py
 npm --prefix web run types
+uv run python scripts/generate_contracts.py --check
 ```
 
 ## Utility scripts

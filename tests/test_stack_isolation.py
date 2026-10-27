@@ -1,6 +1,7 @@
 """The browser-test stack must be isolated from live configuration and clean up after itself."""
 
 import hashlib
+import io
 import json
 import os
 import socket
@@ -12,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.test_stack import FORBIDDEN_PORTS, MARKER, free_port, isolated_env
+from scripts.test_stack import FORBIDDEN_PORTS, MARKER, free_port, http_ok, isolated_env
 
 ROOT = Path(__file__).resolve().parents[1]
 HOSTILE = {
@@ -53,20 +54,76 @@ def test_isolated_env_drops_every_live_setting(monkeypatch):
 
 
 def test_free_ports_never_include_live_ports():
-    assert all(free_port() not in FORBIDDEN_PORTS for _ in range(50))
+    assert all(20000 <= (port := free_port()) < 65535 and port not in FORBIDDEN_PORTS for _ in range(50))
 
 
-def alive(pid):
-    if os.name == "nt":
-        out = subprocess.run(
-            ["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True, check=False
-        ).stdout
-        return str(pid) in out
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+def test_free_port_skips_chromium_blocked_port_and_closes_sockets(monkeypatch):
+    ports = iter((5060, 20000))
+    closed = []
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            closed.append(True)
+
+        def bind(self, address):
+            assert address == ("127.0.0.1", 0)
+
+        def getsockname(self):
+            return ("127.0.0.1", next(ports))
+
+    monkeypatch.setattr("scripts.test_stack.socket.socket", FakeSocket)
+    assert free_port() == 20000
+    assert len(closed) == 2
+
+
+def test_free_port_recovers_when_ephemeral_range_is_always_blocked(monkeypatch):
+    bound, closed = [], []
+    random_offsets = iter((0, 1))
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            closed.append(True)
+
+        def bind(self, address):
+            assert address[0] == "127.0.0.1"
+            bound.append(address[1])
+            assert len(bound) <= 80, "port selection must be bounded"
+            if address[1] == 20000:
+                raise OSError("port occupied")
+            self.port = 5060 if address[1] == 0 else address[1]
+
+        def getsockname(self):
+            return ("127.0.0.1", self.port)
+
+    monkeypatch.setattr("scripts.test_stack.socket.socket", FakeSocket)
+    monkeypatch.setattr("scripts.test_stack.secrets.randbelow", lambda _: next(random_offsets))
+    assert free_port() == 20001
+    assert 0 in bound and bound[-2:] == [20000, 20001]
+    assert len(closed) == len(bound)
+
+
+@pytest.mark.parametrize("payload", [{"status": "ok", "build": {"pid": 111}}, {"status": "ok"}])
+def test_http_ok_requires_stack_token_for_build_and_legacy_health(monkeypatch, payload):
+
+    def fake_urlopen(url, timeout):
+        assert url.endswith("/healthz") and timeout == 1
+        response = io.BytesIO(json.dumps(payload).encode())
+        response.status = 200
+        return response
+
+    monkeypatch.setattr("scripts.test_stack.urllib.request.urlopen", fake_urlopen)
+    url = "http://127.0.0.1:20000/healthz"
+    assert not http_ok(url, "expected")
+    payload["test_token"] = "other"
+    assert not http_ok(url, "expected")
+    payload["test_token"] = "expected"
+    assert http_ok(url, "expected")
 
 
 def listening(port):
@@ -75,7 +132,15 @@ def listening(port):
         return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
-def test_real_stack_is_mock_scripted_hardware_free_and_cleans_up(tmp_path, monkeypatch):
+@pytest.fixture
+def unrelated_listener():
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen()
+        yield sock.getsockname()[1]
+
+
+def test_real_stack_is_mock_scripted_hardware_free_and_cleans_up(tmp_path, monkeypatch, unrelated_listener):
     env = {**os.environ, **HOSTILE}  # a parent shell configured for live hardware and a cloud model
     stack = subprocess.Popen(
         [sys.executable, "scripts/test_stack.py"],
@@ -165,14 +230,14 @@ def test_real_stack_is_mock_scripted_hardware_free_and_cleans_up(tmp_path, monke
         assert info["password"].encode() not in b"".join(
             p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()
         )
-        pids = info["pids"]
-        assert all(alive(pid) for pid in pids)
+        assert len(info["pids"]) == 4
+        assert all(listening(port) for port in ports)
     finally:
         stack.stdin.close()  # the same signal Playwright's teardown (or a crashed parent) delivers
         stack.wait(timeout=20)
     time.sleep(0.5)
-    assert not any(alive(pid) for pid in pids), "test-owned services must not outlive the launcher"
     assert not any(listening(p) for p in ports)
+    assert listening(unrelated_listener), "cleanup must leave unrelated listeners running"
 
 
 @pytest.fixture(autouse=True)

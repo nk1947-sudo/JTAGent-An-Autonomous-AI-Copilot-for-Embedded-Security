@@ -560,6 +560,41 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Delete Attack Plan",
+        "operationId": "delete_attack_plan_api_attack_lab_plans__plan_id__delete",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/attack-lab/plans/{plan_id}/steps/{step_id}/decision": {
@@ -1353,6 +1388,53 @@
         }
       }
     },
+    "/api/v1/sessions/{session_id}": {
+      "delete": {
+        "summary": "Revoke Session",
+        "operationId": "revoke_session_api_v1_sessions__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/memory/read": {
       "post": {
         "summary": "Read",
@@ -1709,7 +1791,14 @@
       "AcquisitionRecord": {
         "properties": {
           "evidence_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Evidence Id"
           },
           "register_evidence_id": {
@@ -1752,11 +1841,25 @@
             "title": "Halted By Edge"
           },
           "initial_state": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Initial State"
           },
           "capture_state": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Capture State"
           },
           "final_state": {
@@ -1773,6 +1876,33 @@
           "restoration": {
             "type": "string",
             "title": "Restoration"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "restoration_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restoration Error Code"
+          },
+          "outcome_uncertain": {
+            "type": "boolean",
+            "title": "Outcome Uncertain",
+            "default": false
           },
           "recovery_required": {
             "type": "boolean",
@@ -1874,6 +2004,17 @@
           "target_id": {
             "type": "string",
             "title": "Target Id"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
           },
           "module_id": {
             "type": "string",
@@ -3649,7 +3790,8 @@
             "type": "string",
             "enum": [
               "scripted",
-              "nebius"
+              "nebius",
+              "ollama"
             ],
             "title": "Inference Backend"
           },
@@ -3836,7 +3978,8 @@
             "type": "string",
             "enum": [
               "scripted",
-              "nebius"
+              "nebius",
+              "ollama"
             ],
             "title": "Inference Backend"
           },

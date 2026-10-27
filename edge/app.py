@@ -94,7 +94,10 @@ def create_app(service=None, api_key=None, uart_auditor=CONFIGURE_UART):
     @app.get("/healthz")
     async def health():
         # Liveness plus the identity of the code this process loaded. Says nothing about readiness.
-        return {"status": "ok", "build": service.identity().model_dump()}
+        result = {"status": "ok", "build": service.identity().model_dump()}
+        if token := os.getenv("JTAGENT_TEST_HEALTH_TOKEN"):
+            result["test_token"] = token
+        return result
 
     @app.get("/api/v1/target/profile", dependencies=[Depends(auth)], response_model=TargetProfile)
     async def profile():
@@ -132,6 +135,10 @@ def create_app(service=None, api_key=None, uart_auditor=CONFIGURE_UART):
     @app.post("/api/v1/sessions", dependencies=[Depends(auth)])
     async def session(req: SessionRequest):
         return service.session(req)
+
+    @app.delete("/api/v1/sessions/{session_id}", dependencies=[Depends(auth)])
+    async def revoke_session(session_id: str):
+        return {"revoked": await service.revoke_session(session_id)}
 
     @app.post("/api/v1/memory/read", dependencies=[Depends(auth)], response_model=ToolResult)
     async def read(req: MemoryReadRequest):

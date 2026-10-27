@@ -1,0 +1,72 @@
+name: Offline CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TARGET_BACKEND: mock
+  INFERENCE_BACKEND: scripted
+  ATTACK_LAB_LIVE_JTAG: "0"
+  LANGSMITH_TRACING: "false"
+  LANGCHAIN_TRACING_V2: "false"
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: 0.12.5
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Python dependencies
+        run: uv sync --frozen --python 3.12
+
+      - name: Check generated API contract
+        run: uv run --frozen python scripts/generate_contracts.py --check
+
+      - name: Lint Python
+        run: uv run --frozen ruff check analysis config contracts edge orchestrator scripts tests
+
+      - name: Check Python formatting
+        run: uv run --frozen ruff format --check analysis config contracts edge orchestrator scripts tests
+
+      - name: Test Python
+        run: uv run --frozen pytest -q
+
+      - name: Install dashboard dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Check generated TypeScript contract
+        run: npm run types:check
+        working-directory: web
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+
+      - name: Build dashboard and run browser tests
+        run: npm test
+        working-directory: web

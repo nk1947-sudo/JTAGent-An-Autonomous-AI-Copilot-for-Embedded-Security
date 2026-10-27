@@ -256,7 +256,8 @@ export interface paths {
         get: operations["get_attack_plan_route_api_attack_lab_plans__plan_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Attack Plan */
+        delete: operations["delete_attack_plan_api_attack_lab_plans__plan_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -585,6 +586,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Session */
+        delete: operations["revoke_session_api_v1_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/memory/read": {
         parameters: {
             query?: never;
@@ -714,7 +732,7 @@ export interface components {
          */
         AcquisitionRecord: {
             /** Evidence Id */
-            evidence_id: string;
+            evidence_id: string | null;
             /** Register Evidence Id */
             register_evidence_id?: string | null;
             /** Method */
@@ -729,13 +747,22 @@ export interface components {
             /** Halted By Edge */
             halted_by_edge: boolean;
             /** Initial State */
-            initial_state: string;
+            initial_state: string | null;
             /** Capture State */
-            capture_state: string;
+            capture_state: string | null;
             /** Final State */
             final_state?: string | null;
             /** Restoration */
             restoration: string;
+            /** Error Code */
+            error_code?: string | null;
+            /** Restoration Error Code */
+            restoration_error_code?: string | null;
+            /**
+             * Outcome Uncertain
+             * @default false
+             */
+            outcome_uncertain: boolean;
             /** Recovery Required */
             recovery_required: boolean;
             /** Generation Before */
@@ -770,6 +797,8 @@ export interface components {
             created_at?: string;
             /** Target Id */
             target_id: string;
+            /** Source Run Id */
+            source_run_id?: string | null;
             /**
              * Module Id
              * @enum {string}
@@ -1485,7 +1514,7 @@ export interface components {
              * Inference Backend
              * @enum {string}
              */
-            inference_backend: "scripted" | "nebius";
+            inference_backend: "scripted" | "nebius" | "ollama";
             /** Model Id */
             model_id: string;
             profile: components["schemas"]["TargetProfile"];
@@ -1596,7 +1625,7 @@ export interface components {
              * Inference Backend
              * @enum {string}
              */
-            inference_backend: "scripted" | "nebius";
+            inference_backend: "scripted" | "nebius" | "ollama";
             /** Model Id */
             model_id: string;
             /** Capture Count */
@@ -2459,6 +2488,37 @@ export interface operations {
             };
         };
     };
+    delete_attack_plan_api_attack_lab_plans__plan_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     decide_attack_step_api_attack_lab_plans__plan_id__steps__step_id__decision_post: {
         parameters: {
             query?: never;
@@ -3044,6 +3104,39 @@ export interface operations {
                 "application/json": components["schemas"]["SessionRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_session_api_v1_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

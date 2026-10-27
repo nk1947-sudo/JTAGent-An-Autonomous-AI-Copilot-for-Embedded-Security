@@ -59,19 +59,35 @@ def isolated_env(extra):
 
 
 def free_port():
-    while True:
+    for _ in range(8):
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
-        if port not in FORBIDDEN_PORTS:
+        # Chromium rejects lower ports such as 5060 even when a service binds successfully.
+        if 20000 <= port < 65535 and port not in FORBIDDEN_PORTS:
             return port
+    # Some hosts configure their ephemeral range entirely below browser-safe ports.
+    for _ in range(64):
+        port = 20000 + secrets.randbelow(65535 - 20000)
+        if port in FORBIDDEN_PORTS:
+            continue
+        try:
+            with socket.socket() as sock:
+                sock.bind(("127.0.0.1", port))
+            return port
+        except OSError:
+            continue  # another listener owns this candidate
+    raise RuntimeError("could not allocate a browser-safe loopback port")
 
 
-def http_ok(url):
+def http_ok(url, token):
     try:
         with urllib.request.urlopen(url, timeout=1) as response:
-            return response.status == 200
-    except OSError:
+            if response.status != 200:
+                return False
+            body = json.load(response)
+            return body.get("status") == "ok" and body.get("test_token") == token
+    except (OSError, ValueError, AttributeError):
         return False
 
 
@@ -81,12 +97,18 @@ class Stack:
         self.log_dir = Path(tempfile.mkdtemp(prefix="jtagent-test-stack-"))
         self.key = secrets.token_urlsafe(32)
         self.password = secrets.token_urlsafe(18)
+        self.health_token = secrets.token_urlsafe(16)
 
     def start(self, name, module, extra_env):
         """Start one service on a free port, retrying if another process wins the port race."""
         for _ in range(8):
             port = free_port()
-            env = isolated_env({**extra_env, "PUBLIC_ORIGIN": f"http://127.0.0.1:{port}"})
+            settings = {
+                **extra_env,
+                "PUBLIC_ORIGIN": f"http://127.0.0.1:{port}",
+                "JTAGENT_TEST_HEALTH_TOKEN": self.health_token,
+            }
+            env = isolated_env(settings)
             args = [
                 sys.executable,
                 "-m",
@@ -108,7 +130,7 @@ class Stack:
             while time.monotonic() < deadline:
                 if child.poll() is not None:
                     break  # exited: most likely the port was taken between allocation and bind
-                if http_ok(f"http://127.0.0.1:{port}/healthz"):
+                if http_ok(f"http://127.0.0.1:{port}/healthz", self.health_token):
                     return port, child
                 time.sleep(0.15)
             if child.poll() is None:

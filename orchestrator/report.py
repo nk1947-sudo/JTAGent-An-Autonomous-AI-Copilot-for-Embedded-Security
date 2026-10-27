@@ -49,10 +49,11 @@ def describe_cpsr(value):
 def acquisition_lines(a):
     if a is None:
         return ["  Acquisition: unknown (captured before acquisition metadata was recorded)"]
-    return [
+    lines = [
         (
             f"  Acquisition: {a.method}; edge halted the CPU: {a.halted_by_edge}; states initial="
-            f"{a.initial_state}, at capture={a.capture_state}, final={a.final_state or 'unknown'}; "
+            f"{a.initial_state or 'unknown'}, at capture={a.capture_state or 'unknown'}, "
+            f"final={a.final_state or 'unknown'}; "
             f"restoration={a.restoration}; recovery required: {a.recovery_required}; "
             f"generation {a.generation_before}->{a.generation_after}"
         ),
@@ -61,11 +62,16 @@ def acquisition_lines(a):
             f"{a.orchestrator_build_id or 'unknown'}; debugger {a.debugger_version or 'unknown'}"
         ),
     ]
+    if a.error_code:
+        lines.append(f"  Acquisition failed: {a.error_code}; outcome uncertain: {a.outcome_uncertain}.")
+    if a.restoration_error_code:
+        lines.append(f"  Restoration failed: {a.restoration_error_code}.")
+    return lines
 
 
 def evidence_lines(captures, registers, acquisitions):
     """Capture and register detail shared by the investigation and Attack Lab Markdown exports."""
-    by_evidence = {a.evidence_id: a for a in acquisitions}
+    by_evidence = {a.evidence_id: a for a in acquisitions if a.evidence_id}
     lines = []
     for c in captures:
         lines += [
@@ -99,6 +105,12 @@ def evidence_lines(captures, registers, acquisitions):
         for name, value in r.values.items():
             note = f"  ({describe_cpsr(value)})" if name == "cpsr" else ""
             lines.append(f"  - {name} = 0x{value:08x}{note}")
+    captured_ids = {c.evidence_id for c in captures}
+    unpaired = [a for a in acquisitions if a.evidence_id not in captured_ids]
+    if unpaired:
+        lines += ["", "## Acquisition attempts without a retained capture", ""]
+        for attempt in unpaired:
+            lines += [f"- Evidence: {attempt.evidence_id or 'none'}", *acquisition_lines(attempt)]
     return lines
 
 
@@ -109,7 +121,7 @@ def markdown(run):
         "",
         f"Run: {run.run_id}",
         f"Target mode: {run.target_backend} | Inference: {run.inference_backend}",
-        f"Model: {run.model_id}",
+        f"Requested model: {run.model_id}",
         f"Target: {run.profile.target_id}",
         f"Created: {run.created_at}",
         f"Purpose: {run.request.purpose}",

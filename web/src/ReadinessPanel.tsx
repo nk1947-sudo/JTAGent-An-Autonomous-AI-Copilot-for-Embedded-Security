@@ -1,4 +1,5 @@
 import type { components } from './api';
+import './readiness-panel.css';
 
 type Readiness = components['schemas']['Readiness'];
 type Props = { readiness: Readiness; ageSeconds: number; stale: boolean };

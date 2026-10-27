@@ -156,7 +156,7 @@ def build_bundle(*, kind, subject, profile, report_json, report_md, builds, raw_
         shutil.rmtree(partial)
     (partial / "captures").mkdir(parents=True)
     try:
-        acquisitions = {a.evidence_id: a for a in subject.acquisitions}
+        acquisitions = {a.evidence_id: a for a in subject.acquisitions if a.evidence_id}
         by_register = {
             a.register_evidence_id: a.evidence_id for a in subject.acquisitions if a.register_evidence_id
         }
@@ -230,6 +230,7 @@ def build_bundle(*, kind, subject, profile, report_json, report_md, builds, raw_
             },
             "captures": captures,
             "registers": _register_entries(subject, by_register),
+            "acquisitions": [a.model_dump() for a in subject.acquisitions],
             "findings": [f.model_dump() for f in getattr(subject, "findings", [])],
             "limitations": LIMITATIONS,
             "artifacts": [],
