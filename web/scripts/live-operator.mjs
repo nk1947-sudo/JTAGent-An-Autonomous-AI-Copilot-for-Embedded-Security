@@ -9,7 +9,7 @@ const output = path.join(root, 'tmp', 'acceptance-live');
 const password = process.env.JTAGENT_DASHBOARD_PASSWORD;
 if (!password) throw new Error('JTAGENT_DASHBOARD_PASSWORD is required');
 const action = process.argv[2];
-if (!['inspect', 'audit', 'inspect-run', 'attack-plan', 'auth-cycle', 'uart-passive'].includes(action)) throw new Error('Unknown live operator action');
+if (!['inspect', 'audit', 'inspect-run', 'attack-plan', 'workbench-accept', 'auth-cycle', 'uart-passive'].includes(action)) throw new Error('Unknown live operator action');
 await mkdir(output, { recursive: true });
 
 const errors = [];
@@ -130,12 +130,19 @@ try {
     await writeFile(path.join(output, 'inspect-run-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
     console.log(JSON.stringify(summary));
   }
-  if (action === 'attack-plan') {
+  if (action === 'attack-plan' || action === 'workbench-accept') {
     const runResponse = await page.request.get('http://127.0.0.1:8000/api/runs');
     if (!runResponse.ok()) throw new Error(`Run inventory returned HTTP ${runResponse.status()}`);
     const runs = await runResponse.json();
     const source = runs.find(run => run.status === 'completed' && run.target_backend === 'openocd' && run.capture_count === 1 && run.bytes_requested === 64);
     if (!source) throw new Error('Approved completed 64-byte live run is unavailable');
+    const sourceResponse = await page.request.get(`http://127.0.0.1:8000/api/runs/${source.run_id}`);
+    if (!sourceResponse.ok()) throw new Error(`Source run lookup returned HTTP ${sourceResponse.status()}`);
+    const sourceRun = await sourceResponse.json();
+    const sourceCapture = sourceRun.captures?.[0];
+    const sourceAcquisition = sourceRun.acquisitions?.find(item => item.evidence_id === sourceCapture?.evidence_id);
+    const sourceRegister = sourceRun.registers?.find(item => item.evidence_id === sourceAcquisition?.register_evidence_id);
+    if (sourceRun.run_id !== source.run_id || sourceRun.captures?.length !== 1 || !sourceAcquisition || !sourceRegister) throw new Error('Completed source run has no linked capture and register snapshot');
     await page.getByRole('button', { name: 'Attack Lab', exact: true }).click();
     await page.getByLabel('Evidence source').selectOption(source.run_id);
     await page.getByLabel('Security research instruction').fill('Review existing firmware integrity evidence from the completed 64-byte capture; do not access the target again.');
@@ -151,6 +158,12 @@ try {
     if (!createdResponse.ok()) throw new Error(`Plan creation returned HTTP ${createdResponse.status()}`);
     const created = await createdResponse.json();
     if (created.module_id !== 'firmware-integrity-assessment' || created.steps?.[0]?.operation !== 'evidence_review' || created.steps?.[1]?.operation !== 'firmware_patch_simulation') throw new Error('Plan operations differ from the reviewed nonphysical module');
+    const capture = created.captures?.[0];
+    const acquisition = created.acquisitions?.find(item => item.evidence_id === capture?.evidence_id);
+    const registers = created.registers?.find(item => item.evidence_id === acquisition?.register_evidence_id);
+    if (created.source_run_id !== source.run_id || created.captures?.length !== 1 || capture?.source_mode !== 'openocd' || !capture.evidence?.instructions?.length || !Number.isInteger(registers?.values?.pc)) throw new Error('Plan did not retain the source capture, decoded instructions, and linked registers');
+    if (capture.evidence_id !== sourceCapture.evidence_id || capture.content_hash !== sourceCapture.content_hash || acquisition.register_evidence_id !== sourceAcquisition.register_evidence_id || registers.evidence_id !== sourceRegister.evidence_id) throw new Error('Plan evidence IDs or hash differ from the source run');
+    if (acquisition.initial_state !== 'running' || acquisition.final_state !== 'running' || acquisition.restoration !== 'running' || acquisition.outcome_uncertain !== false || acquisition.recovery_required !== false || acquisition.error_code || acquisition.restoration_error_code) throw new Error('Source acquisition did not record a certain running-state restoration');
     const planId = created.plan_id;
     await safeScreenshot(page, path.join(output, 'live-plan-created.png'));
     await page.reload();
@@ -176,28 +189,56 @@ try {
     await (await planMarkdown).saveAs(path.join(output, 'live-plan-report.md'));
     await page.getByRole('button', { name: 'AI Workbench', exact: true }).click();
     await page.getByLabel('JTAG evidence plan').selectOption(planId);
+    await page.getByText('EVIDENCE LINKED', { exact: true }).waitFor();
+    const captureView = (await page.locator('.capture-meta').innerText()).trim();
+    const disassemblyView = (await page.locator('.instruction-table').innerText()).trim();
+    const registerView = (await page.locator('.workbench-registers').innerText()).trim();
+    if (!captureView.includes(`0x${capture.base_address.toString(16).padStart(8, '0')}`) || !disassemblyView.includes(capture.evidence.instructions[0].mnemonic) || !registerView.includes(`0x${registers.values.pc.toString(16).padStart(8, '0')}`) || !(await page.locator('.evidence-code small').innerText()).includes(capture.content_hash)) throw new Error('Workbench did not render the linked physical capture, hash, disassembly, and registers');
     const workbenchState = (await page.locator('.artifact-select').innerText()).trim();
     await safeScreenshot(page, path.join(output, 'live-workbench-selected-plan.png'));
     await page.getByRole('button', { name: 'Attack Lab', exact: true }).click();
     await page.getByLabel('Saved Attack Lab plans').selectOption(planId);
-    await page.getByRole('button', { name: 'Delete plan from memory' }).click();
-    await page.getByRole('dialog', { name: 'Delete in-memory plan?' }).waitFor();
-    await safeScreenshot(page, path.join(output, 'live-plan-delete-confirmation.png'));
-    await page.getByRole('button', { name: 'Keep plan' }).click();
-    if (!await page.getByLabel('Saved Attack Lab plans').locator(`option[value="${planId}"]`).count()) throw new Error('Keep plan unexpectedly removed the plan');
-    await page.route(`**/api/attack-lab/plans/${planId}`, async route => {
-      if (route.request().method() === 'DELETE') await new Promise(resolve => setTimeout(resolve, 500));
-      await route.continue();
-    });
-    await page.getByRole('button', { name: 'Delete plan from memory' }).click();
-    await page.getByRole('button', { name: 'Delete plan', exact: true }).click();
-    await page.locator('.attack-progress').waitFor();
-    await safeScreenshot(page, path.join(output, 'live-plan-delete-pending.png'));
-    await page.getByText('Plan deleted from memory. Existing exports remain on disk.').waitFor();
-    await safeScreenshot(page, path.join(output, 'live-plan-deleted.png'));
-    const summary = { source_run_id: source.run_id, plan_id: planId, module_id: created.module_id, initial_status: created.status, reviewed_step: reviewed.steps[0].result, terminal_status: 'simulation_completed', workbench_state: workbenchState, deletion: 'confirmed', downloads: ['live-plan-report.json', 'live-plan-report.md'] };
-    await writeFile(path.join(output, 'attack-plan-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
-    console.log(JSON.stringify(summary));
+    const raw = page.getByLabel(/Include raw bytes/).first();
+    if (await raw.isChecked()) throw new Error('Raw bytes unexpectedly selected for plan export');
+    await page.getByRole('button', { name: 'Export evidence bundle' }).click();
+    await page.getByTestId('bundle-result').waitFor();
+    const bundleResult = (await page.getByTestId('bundle-result').innerText()).trim();
+    if (!bundleResult.includes('INCOMPLETE · 0/1 captures with raw bytes')) throw new Error('Raw-free plan bundle did not report the expected incomplete verification');
+    await safeScreenshot(page, path.join(output, 'live-plan-bundle-export.png'));
+    if (action === 'workbench-accept') {
+      const configResponse = await page.request.get('http://127.0.0.1:8000/api/config');
+      const readinessResponse = await page.request.get('http://127.0.0.1:8000/api/readiness');
+      if (!configResponse.ok() || !readinessResponse.ok()) throw new Error('Final authenticated config or readiness check failed');
+      const config = await configResponse.json();
+      const readiness = await readinessResponse.json();
+      if (readiness.recovery_required !== false || readiness.target?.execution_state !== 'running' || readiness.live_ready !== true) throw new Error('Final target readiness or restoration check failed');
+      const retainedResponse = await page.request.get(`http://127.0.0.1:8000/api/attack-lab/plans/${planId}`);
+      if (!retainedResponse.ok()) throw new Error(`Retained plan lookup returned HTTP ${retainedResponse.status()}`);
+      const retained = await retainedResponse.json();
+      if (retained.plan_id !== planId || retained.source_run_id !== source.run_id || retained.captures?.[0]?.evidence_id !== capture.evidence_id) throw new Error('Run-linked plan was not retained after export');
+      const summary = { source_run_id: source.run_id, plan_id: planId, capture_evidence_id: capture.evidence_id, acquisition_register_evidence_id: acquisition.register_evidence_id, register_evidence_id: registers.evidence_id, capture_address: capture.base_address, content_hash: capture.content_hash, decoded_instructions: capture.evidence.instructions.length, acquisition: { initial_state: acquisition.initial_state, final_state: acquisition.final_state, restoration: acquisition.restoration, outcome_uncertain: acquisition.outcome_uncertain, recovery_required: acquisition.recovery_required }, workbench_state: workbenchState, capture_view: captureView, register_names: Object.keys(registers.values), bundle_result: bundleResult, uart_config: { enabled: config.uart?.enabled, port: config.uart?.port, baud: config.uart?.baud }, final_readiness: { execution_state: readiness.target.execution_state, recovery_required: readiness.recovery_required, live_ready: readiness.live_ready }, downloads: ['live-plan-report.json', 'live-plan-report.md'], plan_retained: retained.plan_id === planId };
+      await writeFile(path.join(output, 'workbench-accept-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+      console.log(JSON.stringify(summary));
+    } else {
+      await page.getByRole('button', { name: 'Delete plan from memory' }).click();
+      await page.getByRole('dialog', { name: 'Delete in-memory plan?' }).waitFor();
+      await safeScreenshot(page, path.join(output, 'live-plan-delete-confirmation.png'));
+      await page.getByRole('button', { name: 'Keep plan' }).click();
+      if (!await page.getByLabel('Saved Attack Lab plans').locator(`option[value="${planId}"]`).count()) throw new Error('Keep plan unexpectedly removed the plan');
+      await page.route(`**/api/attack-lab/plans/${planId}`, async route => {
+        if (route.request().method() === 'DELETE') await new Promise(resolve => setTimeout(resolve, 500));
+        await route.continue();
+      });
+      await page.getByRole('button', { name: 'Delete plan from memory' }).click();
+      await page.getByRole('button', { name: 'Delete plan', exact: true }).click();
+      await page.locator('.attack-progress').waitFor();
+      await safeScreenshot(page, path.join(output, 'live-plan-delete-pending.png'));
+      await page.getByText('Plan deleted from memory. Existing exports remain on disk.').waitFor();
+      await safeScreenshot(page, path.join(output, 'live-plan-deleted.png'));
+      const summary = { source_run_id: source.run_id, plan_id: planId, module_id: created.module_id, initial_status: created.status, reviewed_step: reviewed.steps[0].result, terminal_status: 'simulation_completed', workbench_state: workbenchState, deletion: 'confirmed', downloads: ['live-plan-report.json', 'live-plan-report.md'] };
+      await writeFile(path.join(output, 'attack-plan-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+      console.log(JSON.stringify(summary));
+    }
   }
   if (action === 'auth-cycle') {
     await page.getByRole('button', { name: 'Investigation', exact: true }).click();

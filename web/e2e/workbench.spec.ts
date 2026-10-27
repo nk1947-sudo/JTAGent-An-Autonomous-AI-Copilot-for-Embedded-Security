@@ -132,3 +132,20 @@ test('a retained plan that violates the contract is hidden with an explanation',
   await expect(page.getByRole('alert').first()).toContainText('failed contract validation');
   await expect(page.getByText('NO CAPTURE')).toBeVisible();
 });
+
+test('registers are unavailable when the selected capture has no acquisition link', async ({ page }) => {
+  const plan = await openWorkbenchWithEvidence(page);
+  await page.route('**/api/attack-lab/plans', async route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    const plans = await response.json();
+    const selected = plans.find((item: { plan_id: string }) => item.plan_id === plan.plan_id);
+    selected.acquisitions[0].register_evidence_id = null;
+    await route.fulfill({ json: plans });
+  });
+  await page.getByRole('button', { name: 'Investigation', exact: true }).click();
+  await page.getByRole('button', { name: 'AI Workbench', exact: true }).click();
+  await expect(page.locator('.capture-meta')).toBeVisible();
+  await expect(page.getByText('No register snapshot linked to this capture.')).toBeVisible();
+  await expect(page.locator('.workbench-registers')).toHaveCount(0);
+});
